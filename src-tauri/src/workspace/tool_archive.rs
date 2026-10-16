@@ -295,18 +295,74 @@ mod tests {
     }
 
     #[test]
-    fn refuses_a_zip_entry_that_leaves_the_root() {
+    fn unpacks_a_deflated_zip_release() {
         let file = tempfile::NamedTempFile::new().unwrap();
         let mut zip = zip::ZipWriter::new(file.reopen().unwrap());
-        zip.start_file("../escaped", zip::write::SimpleFileOptions::default())
-            .unwrap();
-        zip.write_all(b"x").unwrap();
+        let options = zip::write::SimpleFileOptions::default()
+            .compression_method(zip::CompressionMethod::Deflated)
+            .unix_permissions(0o755);
+        zip.add_directory("platform-tools/", options).unwrap();
+        zip.start_file("platform-tools/adb", options).unwrap();
+        zip.write_all(b"#!sh").unwrap();
+        zip.finish().unwrap();
+        let root = tempfile::tempdir().unwrap();
+
+        extract(file.path(), ArchiveFormat::Zip, root.path()).unwrap();
+
+        let executable = root.path().join("platform-tools/adb");
+        assert_eq!(fs::read(&executable).unwrap(), b"#!sh");
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+
+            assert_eq!(
+                fs::metadata(executable).unwrap().permissions().mode() & 0o777,
+                0o755
+            );
+        }
+    }
+
+    #[test]
+    fn refuses_a_zip_entry_that_leaves_the_root() {
+        for name in [
+            "../escaped",
+            r"\\?\C:\../escaped",
+            r"\\?\UNC\server\share\../escaped",
+        ] {
+            let file = tempfile::NamedTempFile::new().unwrap();
+            let mut zip = zip::ZipWriter::new(file.reopen().unwrap());
+            zip.start_file(name, zip::write::SimpleFileOptions::default())
+                .unwrap();
+            zip.write_all(b"x").unwrap();
+            zip.finish().unwrap();
+            let directory = tempfile::tempdir().unwrap();
+            let root = directory.path().join("contents");
+
+            assert_eq!(
+                extract(file.path(), ArchiveFormat::Zip, &root),
+                Err(archive_error("archive path is unsafe")),
+                "{name}"
+            );
+            assert!(!directory.path().join("escaped").exists());
+        }
+    }
+
+    #[test]
+    fn refuses_links_in_a_zip() {
+        let file = tempfile::NamedTempFile::new().unwrap();
+        let mut zip = zip::ZipWriter::new(file.reopen().unwrap());
+        zip.add_symlink(
+            "adb",
+            "../escaped",
+            zip::write::SimpleFileOptions::default(),
+        )
+        .unwrap();
         zip.finish().unwrap();
         let root = tempfile::tempdir().unwrap();
 
         assert_eq!(
             extract(file.path(), ArchiveFormat::Zip, root.path()),
-            Err(archive_error("archive path is unsafe"))
+            Err(archive_error("archive contains a symbolic link"))
         );
     }
 
