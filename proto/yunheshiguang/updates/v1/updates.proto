@@ -1,0 +1,81 @@
+syntax = "proto3";
+
+package yunheshiguang.updates.v1;
+
+import "google/protobuf/timestamp.proto";
+import "yunheshiguang/workspace/v1/workspace.proto";
+
+enum UpdateStatus {
+  UPDATE_STATUS_UNSPECIFIED = 0;
+  // No check has finished since the app started.
+  UPDATE_STATUS_IDLE = 1;
+  UPDATE_STATUS_CHECKING = 2;
+  UPDATE_STATUS_UP_TO_DATE = 3;
+  UPDATE_STATUS_AVAILABLE = 4;
+  UPDATE_STATUS_FAILED = 5;
+  // Built outside the release workflows, so there is no channel to follow.
+  UPDATE_STATUS_LOCAL_BUILD = 6;
+}
+
+// What this copy of the app is.
+message BuildInfo {
+  // `nightly` or `release`; empty for a local build.
+  string channel = 1;
+  string version = 2;
+  // The full commit the build was made from; empty for a local build.
+  string commit = 3;
+  // The GitHub repository, as `owner/name`, that publishes its releases.
+  string repository = 4;
+}
+
+message AvailableUpdate {
+  // The commit for nightly builds, the tag for releases.
+  string id = 1;
+  // `nightly` or `release`.
+  string channel = 2;
+  string version = 3;
+  string commit = 4;
+  string page_url = 5;
+  // The file that matches how this copy was installed; empty when none does.
+  string download_url = 6;
+  string download_name = 7;
+}
+
+message UpdateState {
+  BuildInfo build = 1;
+  bool check_automatically = 2;
+  UpdateStatus status = 3;
+  AvailableUpdate update = 4;
+  google.protobuf.Timestamp checked_at = 5;
+  // Why the last check failed.
+  yunheshiguang.workspace.v1.UiText problem = 6;
+  string releases_url = 7;
+}
+
+message GetUpdateStateRequest {}
+
+message CheckForUpdatesRequest {}
+
+message SetAutomaticChecksRequest {
+  bool check_automatically = 1;
+}
+
+message UpdateSettingsResult {
+  bool accepted = 1;
+  // Why the setting was not saved.
+  yunheshiguang.workspace.v1.UiText detail = 2;
+  UpdateState state = 3;
+}
+
+// Sent with `workspace:update-available` when a scheduled check finds a new build.
+message UpdateAvailable {
+  AvailableUpdate update = 1;
+}
+
+// Release checks against the manifests the release workflows publish. The app never
+// downloads or replaces itself; it only says what is available and where.
+service UpdateService {
+  rpc GetUpdateState(GetUpdateStateRequest) returns (UpdateState);
+  rpc CheckForUpdates(CheckForUpdatesRequest) returns (UpdateState);
+  rpc SetAutomaticChecks(SetAutomaticChecksRequest) returns (UpdateSettingsResult);
+}

@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-rpc-cancel"
+description = "Enables the rpc_cancel command without any pre-configured scope."
+commands.allow = ["rpc_cancel"]
+
+[[permission]]
+identifier = "deny-rpc-cancel"
+description = "Denies the rpc_cancel command without any pre-configured scope."
+commands.deny = ["rpc_cancel"]

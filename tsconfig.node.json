@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "target": "ES2023",
+    "lib": ["ES2023"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "allowJs": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "types": ["node"],
+
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true
+  },
+  "include": ["vite.config.ts", "vitest.config.ts", "steiger.config.ts", "scripts/**/*.ts"]
+}

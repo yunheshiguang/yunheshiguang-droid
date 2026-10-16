@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package yunheshiguang.rpc.v1;
+
+import "google/protobuf/descriptor.proto";
+
+extend google.protobuf.MethodOptions {
+  // The local HTTP API serves this method as well as the app's own windows.
+  // Methods without it answer only the app.
+  bool local_api = 50100;
+}

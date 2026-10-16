@@ -1,0 +1,19 @@
+[package]
+name = "yunheshiguang-contract"
+description = "Protobuf contract types shared by the yunheshiguang app, its SDK, and extensions"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+buffa.workspace = true
+buffa-types.workspace = true
+connectrpc.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+
+[build-dependencies]
+connectrpc-build.workspace = true
+protox.workspace = true
+walkdir.workspace = true

@@ -1,0 +1,53 @@
+syntax = "proto3";
+
+package yunheshiguang.scripts.v1;
+
+import "yunheshiguang/workspace/v1/workspace.proto";
+
+enum ScriptLanguage {
+  SCRIPT_LANGUAGE_UNSPECIFIED = 0;
+  // A POSIX shell script run by the device's `sh`.
+  SCRIPT_LANGUAGE_SHELL = 1;
+  // A JavaScript file run by an automation app on the device.
+  SCRIPT_LANGUAGE_JAVASCRIPT = 2;
+}
+
+// A script in the library. Each script is one document in the `scripts`
+// collection: the frontend writes it, and the backend reads it when a batch
+// action or a flow step runs it.
+message Script {
+  string name = 1;
+  ScriptLanguage language = 2;
+  string body = 3;
+}
+
+// One way of running scripts on devices.
+message ScriptEngineInfo {
+  string id = 1;
+  yunheshiguang.workspace.v1.UiText label = 2;
+  yunheshiguang.workspace.v1.UiText description = 3;
+  repeated ScriptLanguage languages = 4;
+  // Whether the engine returns what the script printed and its exit code.
+  // Engines that only launch the script on the device return right away.
+  bool captures_output = 5;
+  // What to do on a device before this engine can serve it, in order.
+  repeated yunheshiguang.workspace.v1.UiText setup = 6;
+}
+
+message ListScriptEnginesRequest {
+  yunheshiguang.workspace.v1.WorkspaceScope scope = 1 [deprecated = true];
+}
+
+// The installed engines in the order they are asked: for each device, the
+// first engine that takes the script runs it.
+message ScriptEngines {
+  repeated ScriptEngineInfo engines = 1;
+}
+
+// Engines that run scripts on devices.
+service ScriptService {
+  // The installed script engines and the languages they run.
+  rpc ListScriptEngines(ListScriptEnginesRequest) returns (ScriptEngines) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+}

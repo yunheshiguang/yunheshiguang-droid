@@ -1,0 +1,258 @@
+syntax = "proto3";
+
+package yunheshiguang.automation.v1;
+
+import "google/protobuf/timestamp.proto";
+import "yunheshiguang/governance/v1/governance.proto";
+import "yunheshiguang/rpc/v1/options.proto";
+import "yunheshiguang/workspace/v1/workspace.proto";
+
+// A flow: batch actions run in order on the same devices. Each flow is one
+// document in the `automation-flows` collection; the frontend writes it and
+// the backend runs it.
+message Flow {
+  string name = 1;
+  repeated FlowStep steps = 2;
+}
+
+message FlowStep {
+  string id = 1;
+  yunheshiguang.workspace.v1.BatchActionKind kind = 2;
+  // The one value the action takes: text, package name, path, or script id.
+  string value = 3;
+}
+
+// A stored flow and its document id, as the local API lists them.
+message FlowEntry {
+  string id = 1;
+  Flow flow = 2;
+}
+
+message Flows {
+  repeated FlowEntry flows = 1;
+}
+
+message DeviceList {
+  repeated string device_ids = 1;
+}
+
+// Which devices a run goes to. Groups and tags are resolved when the run
+// starts, against the devices connected at that moment.
+message RunTarget {
+  oneof target {
+    DeviceList devices = 1;
+    string group_id = 2;
+    string tag = 3;
+  }
+}
+
+message RunOptions {
+  // How many times the flow runs back to back; zero and one both mean once.
+  uint32 repeat = 1;
+  // Pause between two repetitions.
+  uint32 repeat_interval_seconds = 2;
+  // How many more times a failed step is tried before the run stops.
+  uint32 retry_attempts = 3;
+  // Pause before trying a failed step again.
+  uint32 retry_delay_seconds = 4;
+}
+
+enum RunTrigger {
+  RUN_TRIGGER_UNSPECIFIED = 0;
+  RUN_TRIGGER_MANUAL = 1;
+  RUN_TRIGGER_SCHEDULE = 2;
+  RUN_TRIGGER_API = 3;
+}
+
+enum RunStatus {
+  RUN_STATUS_UNSPECIFIED = 0;
+  RUN_STATUS_RUNNING = 1;
+  RUN_STATUS_SUCCEEDED = 2;
+  RUN_STATUS_FAILED = 3;
+  // Stopped on request; the step in flight finished first.
+  RUN_STATUS_STOPPED = 4;
+}
+
+enum StepStatus {
+  STEP_STATUS_UNSPECIFIED = 0;
+  STEP_STATUS_PENDING = 1;
+  STEP_STATUS_RUNNING = 2;
+  STEP_STATUS_DONE = 3;
+  STEP_STATUS_FAILED = 4;
+  STEP_STATUS_SKIPPED = 5;
+}
+
+message StepRun {
+  string step_id = 1;
+  yunheshiguang.workspace.v1.BatchActionKind kind = 2;
+  StepStatus status = 3;
+  // Attempts made so far, retries included.
+  uint32 attempts = 4;
+  // What each device's last attempt returned.
+  yunheshiguang.workspace.v1.BatchActionResult result = 5;
+}
+
+message FlowRun {
+  // Time-ordered, so sorting by id sorts by start time.
+  string id = 1;
+  string flow_id = 2;
+  string flow_name = 3;
+  RunTrigger trigger = 4;
+  // What started the run: a window label, `schedule:<name>`, or `api:<name>`.
+  string actor = 5;
+  RunStatus status = 6;
+  // The devices the target resolved to when the run started.
+  repeated string device_ids = 7;
+  // The repetition in progress, counting from one.
+  uint32 iteration = 8;
+  uint32 iterations = 9;
+  // The steps of the repetition in progress.
+  repeated StepRun steps = 10;
+  google.protobuf.Timestamp started_at = 11;
+  google.protobuf.Timestamp finished_at = 12;
+  // Set when a schedule started the run.
+  string schedule_id = 13;
+  // Why the run could not start or why it stopped early.
+  yunheshiguang.workspace.v1.UiText detail = 14;
+  // What the run was asked to do, so it can be run again the same way.
+  RunTarget target = 15;
+  RunOptions options = 16;
+  // Who started the run; a scheduled run acts as the schedule's owner.
+  yunheshiguang.governance.v1.Operator operator = 17;
+}
+
+message StartFlowRunRequest {
+  string flow_id = 1;
+  RunTarget target = 2;
+  RunOptions options = 3;
+  yunheshiguang.workspace.v1.WorkspaceScope scope = 4 [deprecated = true];
+}
+
+// Whether a run started; refused runs carry the reason in `detail`.
+message FlowRunResult {
+  bool accepted = 1;
+  yunheshiguang.workspace.v1.UiText detail = 2;
+  FlowRun run = 3;
+}
+
+message StopFlowRunRequest {
+  string run_id = 1;
+  yunheshiguang.workspace.v1.WorkspaceScope scope = 2 [deprecated = true];
+}
+
+message ListFlowRunsRequest {
+  yunheshiguang.workspace.v1.WorkspaceScope scope = 1 [deprecated = true];
+}
+
+// Runs in progress and the recent history, newest first.
+message FlowRuns {
+  repeated FlowRun runs = 1;
+}
+
+// Run a flow on a target at the times a cron expression names. Schedules
+// belong to the computer the devices are attached to, so they are stored
+// with the app's local data rather than in the synced document store.
+message Schedule {
+  // Letters, digits, `-` and `_`; a UUID fits.
+  string id = 1;
+  string name = 2;
+  string flow_id = 3;
+  RunTarget target = 4;
+  // A five-field cron expression in local time, for example `0 9 * * 1-5`.
+  string cron = 5;
+  bool enabled = 6;
+  RunOptions options = 7;
+  // Who saved the schedule. Its runs are authorized and audited as this
+  // operator; the backend sets it when the schedule is saved.
+  yunheshiguang.governance.v1.Operator owner = 8;
+}
+
+message ScheduleState {
+  Schedule schedule = 1;
+  // Unset when the schedule is disabled or its cron expression is invalid.
+  google.protobuf.Timestamp next_run_at = 2;
+  string last_run_id = 3;
+  RunStatus last_status = 4;
+  google.protobuf.Timestamp last_run_at = 5;
+  // Why the schedule cannot fire, such as an invalid cron expression.
+  yunheshiguang.workspace.v1.UiText problem = 6;
+}
+
+message ListSchedulesRequest {
+  yunheshiguang.workspace.v1.WorkspaceScope scope = 1 [deprecated = true];
+}
+
+message Schedules {
+  repeated ScheduleState schedules = 1;
+}
+
+message SaveScheduleRequest {
+  Schedule schedule = 1;
+  yunheshiguang.workspace.v1.WorkspaceScope scope = 2 [deprecated = true];
+}
+
+message RemoveScheduleRequest {
+  string id = 1;
+  yunheshiguang.workspace.v1.WorkspaceScope scope = 2 [deprecated = true];
+}
+
+message ScheduleResult {
+  bool accepted = 1;
+  yunheshiguang.workspace.v1.UiText detail = 2;
+}
+
+// Payload of the `workspace:automation-changed` event, sent whenever a run
+// progresses or a schedule changes.
+message AutomationChanged {
+  // The run that changed; empty when a schedule changed.
+  string run_id = 1;
+}
+
+// Flows, their runs, and the schedules that start them.
+service AutomationService {
+  // Every saved flow, and why a flow cannot run if it cannot.
+  rpc ListFlows(ListFlowsRequest) returns (Flows) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+    option (yunheshiguang.rpc.v1.local_api) = true;
+  }
+
+  // Starts a flow on its target devices.
+  rpc StartFlowRun(StartFlowRunRequest) returns (FlowRunResult) {
+    option (yunheshiguang.rpc.v1.local_api) = true;
+  }
+
+  // Stops a run after its current step.
+  rpc StopFlowRun(StopFlowRunRequest) returns (FlowRunResult) {
+    option (yunheshiguang.rpc.v1.local_api) = true;
+  }
+
+  // Running and recently finished runs, newest first.
+  rpc ListFlowRuns(ListFlowRunsRequest) returns (FlowRuns) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+    option (yunheshiguang.rpc.v1.local_api) = true;
+  }
+
+  // One run and its step-by-step progress.
+  rpc GetFlowRun(GetFlowRunRequest) returns (FlowRun) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+    option (yunheshiguang.rpc.v1.local_api) = true;
+  }
+
+  // Every schedule with its next and last run.
+  rpc ListSchedules(ListSchedulesRequest) returns (Schedules) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+    option (yunheshiguang.rpc.v1.local_api) = true;
+  }
+
+  // Creates or changes a schedule.
+  rpc SaveSchedule(SaveScheduleRequest) returns (ScheduleResult);
+
+  // Removes a schedule.
+  rpc RemoveSchedule(RemoveScheduleRequest) returns (ScheduleResult);
+}
+
+message ListFlowsRequest {}
+
+message GetFlowRunRequest {
+  string run_id = 1;
+}

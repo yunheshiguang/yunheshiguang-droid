@@ -1,0 +1,35 @@
+[workspace]
+resolver = "3"
+members = ["src-tauri", "crates/*", "extensions/*/native"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "GPL-3.0-only"
+publish = false
+
+[profile.dev.package."*"]
+debug = false
+
+[workspace.dependencies]
+yunheshiguang-contract = { path = "crates/contract", version = "0.1.0" }
+yunheshiguang-sdk = { path = "crates/sdk", version = "0.1.0" }
+tauri-plugin-reference-extension = { path = "extensions/reference/native", version = "0.1.0" }
+
+tauri = "2.12.1"
+tauri-build = "2.7.1"
+buffa = { version = "0.9.2", features = ["json"] }
+buffa-types = { version = "0.9.2", features = ["json"] }
+connectrpc = { version = "0.9.1", default-features = false, features = ["json", "gzip"] }
+connectrpc-build = "0.9.0"
+protox = "0.10.0"
+walkdir = "2.5.0"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.151"
+log = "0.4"
+url = "2.5.8"
+tempfile = "3.27.0"
+atomic-write-file = "0.3.1"
+base64 = "0.23.1"
+sha2 = "0.11.0"
+subtle = "2.6.1"

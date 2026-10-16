@@ -1,0 +1,44 @@
+syntax = "proto3";
+
+package yunheshiguang.input.v1;
+
+import "yunheshiguang/workspace/v1/workspace.proto";
+
+// What an input channel can put on a device.
+enum InputKind {
+  INPUT_KIND_UNSPECIFIED = 0;
+  // Typing into the text field that has focus.
+  INPUT_KIND_TEXT = 1;
+  // Writing the device clipboard without pasting it.
+  INPUT_KIND_CLIPBOARD = 2;
+}
+
+// One way of getting text onto devices, such as a helper pushed to the device
+// or an input method installed on it.
+message InputChannelInfo {
+  string id = 1;
+  yunheshiguang.workspace.v1.UiText label = 2;
+  yunheshiguang.workspace.v1.UiText description = 3;
+  repeated InputKind kinds = 4;
+  // What to do on a device before this channel can serve it, in order. Empty
+  // when the channel needs nothing on the device.
+  repeated yunheshiguang.workspace.v1.UiText setup = 5;
+}
+
+message ListInputChannelsRequest {
+  yunheshiguang.workspace.v1.WorkspaceScope scope = 1 [deprecated = true];
+}
+
+// The installed channels in the order they are asked: for each device, the
+// first channel that takes a request delivers it.
+message InputChannels {
+  repeated InputChannelInfo channels = 1;
+}
+
+// Channels that deliver text and clipboard contents to devices.
+service InputService {
+  // The installed input channels and what they need.
+  rpc ListInputChannels(ListInputChannelsRequest) returns (InputChannels) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+}

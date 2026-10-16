@@ -1,0 +1,33 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Capability for workspace windows",
+  "windows": ["main", "workspace_*"],
+  "permissions": [
+    "allow-rpc",
+    "allow-rpc-cancel",
+    "allow-reveal-log-directory",
+    "core:event:allow-listen",
+    "core:event:allow-unlisten",
+    "core:window:default",
+    "core:window:allow-set-focus",
+    "core:window:allow-close",
+    "core:window:allow-minimize",
+    "core:window:allow-toggle-maximize",
+    "core:window:allow-start-dragging",
+    "core:webview:allow-create-webview-window",
+    "core:webview:deny-internal-toggle-devtools",
+    "dialog:allow-open",
+    "dialog:allow-save",
+    "log:default",
+    {
+      "identifier": "opener:allow-open-url",
+      "allow": [
+        { "url": "https://developer.android.com/*" },
+        { "url": "https://dl.google.com/*" },
+        { "url": "https://github.com/*/*/releases" },
+        { "url": "https://github.com/*/*/releases/*" }
+      ]
+    }
+  ]
+}

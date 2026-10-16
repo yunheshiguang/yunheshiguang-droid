@@ -1,0 +1,250 @@
+syntax = "proto3";
+
+package yunheshiguang.governance.v1;
+
+import "google/protobuf/timestamp.proto";
+import "yunheshiguang/rpc/v1/options.proto";
+import "yunheshiguang/workspace/v1/workspace.proto";
+
+// An operation that changes devices or the host toolchain. Governance authorizes
+// it before it runs and audits it afterwards. Append new values; never renumber.
+enum GovernedAction {
+  GOVERNED_ACTION_UNSPECIFIED = 0;
+  GOVERNED_ACTION_RUN_BATCH_ACTION = 1;
+  GOVERNED_ACTION_CONNECT_DEVICE = 2;
+  GOVERNED_ACTION_PAIR_DEVICE = 3;
+  GOVERNED_ACTION_DISCONNECT_DEVICE = 4;
+  GOVERNED_ACTION_INSTALL_PLATFORM_TOOLS = 5;
+  GOVERNED_ACTION_UPDATE_PLATFORM_TOOLS_CONFIG = 6;
+  // Numbering, naming, tagging or regrouping devices, and creating, renaming or
+  // removing groups.
+  GOVERNED_ACTION_ORGANIZE_DEVICES = 7;
+  // Starting a flow run, by hand, from a schedule, or through the API. Each
+  // step is still authorized and audited as a batch action.
+  GOVERNED_ACTION_RUN_AUTOMATION = 8;
+  // Creating, changing, or removing schedules.
+  GOVERNED_ACTION_MANAGE_SCHEDULES = 9;
+  // Turning the local API on or off and issuing or revoking its tokens.
+  GOVERNED_ACTION_MANAGE_API = 10;
+  // Sending a prompt to an AI provider to draft a flow or a script.
+  GOVERNED_ACTION_USE_ASSISTANT = 11;
+  // Changing the AI assistant's provider, endpoint, model, or key.
+  GOVERNED_ACTION_MANAGE_ASSISTANT = 12;
+  // Installing a template package, or exporting flows and scripts as one.
+  GOVERNED_ACTION_MANAGE_PACKAGES = 13;
+  // Exporting audit entries to a file.
+  GOVERNED_ACTION_EXPORT_AUDIT = 14;
+  // Starting, stopping, registering, or removing cloud phones.
+  GOVERNED_ACTION_MANAGE_CLOUD_PHONES = 15;
+  // Installing or replacing the managed scrcpy release.
+  GOVERNED_ACTION_INSTALL_SCRCPY = 16;
+  // Changing where scrcpy comes from or how it mirrors devices.
+  GOVERNED_ACTION_UPDATE_SCRCPY_CONFIG = 17;
+  // Opening a scrcpy window that mirrors, and may control, a device.
+  GOVERNED_ACTION_MIRROR_DEVICE = 18;
+  // Saving or removing documents such as flows, scripts, and phrases.
+  GOVERNED_ACTION_EDIT_DOCUMENTS = 19;
+  // Reading the audit history or a report built from it. Only refusals are
+  // recorded.
+  GOVERNED_ACTION_VIEW_AUDIT = 20;
+}
+
+// Who performed an operation: the person using this computer, a team member an
+// identity provider recognized, or a local API caller.
+message Operator {
+  string id = 1;
+  string name = 2;
+  // Roles an authorization policy grants permissions to.
+  repeated string roles = 3;
+}
+
+enum AuditOutcome {
+  AUDIT_OUTCOME_UNSPECIFIED = 0;
+  AUDIT_OUTCOME_SUCCEEDED = 1;
+  AUDIT_OUTCOME_FAILED = 2;
+  // The authorization provider refused the operation before it ran.
+  AUDIT_OUTCOME_DENIED = 3;
+}
+
+// One governed operation as the audit trail remembers it.
+message AuditEntry {
+  string id = 1;
+  google.protobuf.Timestamp occurred_at = 2;
+  GovernedAction action = 3;
+  AuditOutcome outcome = 4;
+  // Through what the operation came: a window label, `schedule:<name>`, or
+  // `api:<caller>`.
+  string actor = 5;
+  // Devices or endpoints the operation touched, masked the way the run log masks them.
+  repeated string targets = 6;
+  yunheshiguang.workspace.v1.UiText detail = 7;
+  // Who performed the operation.
+  Operator operator = 8;
+  // Groups of the target devices; ungrouped devices count as `ungrouped`.
+  repeated string groups = 9;
+}
+
+// Filters for the audit history. An empty field matches everything.
+message AuditQuery {
+  repeated GovernedAction actions = 1;
+  repeated AuditOutcome outcomes = 2;
+  string operator_id = 3;
+  // An exact actor, or a channel such as `api` or `schedule` that matches every
+  // actor with that prefix.
+  string actor = 4;
+  google.protobuf.Timestamp since = 5;
+  google.protobuf.Timestamp until = 6;
+  // Only entries older than this entry, for reading the next page.
+  string before_id = 7;
+  // At most this many entries; zero means the store's page size.
+  uint32 limit = 8;
+}
+
+message QueryAuditRequest {
+  AuditQuery query = 1;
+  yunheshiguang.workspace.v1.WorkspaceScope scope = 2 [deprecated = true];
+}
+
+// One row of an audit report: what was counted and how it went.
+message AuditTally {
+  // An operator id, a device group id (`ungrouped` for devices in none), an
+  // action such as `GOVERNED_ACTION_RUN_BATCH_ACTION`, or a day as `YYYY-MM-DD`
+  // in the caller's time zone.
+  string key = 1;
+  // A readable name when the key is not one, such as an operator's name.
+  string label = 2;
+  uint32 total = 3;
+  uint32 succeeded = 4;
+  uint32 failed = 5;
+  uint32 denied = 6;
+}
+
+// Totals over the audit history, by operator, device group, action, and day.
+message AuditReport {
+  // Busiest first.
+  repeated AuditTally by_operator = 1;
+  repeated AuditTally by_group = 2;
+  repeated AuditTally by_action = 3;
+  // Oldest first.
+  repeated AuditTally by_day = 4;
+  // How many entries were counted.
+  uint32 entries = 5;
+  // The count stopped at the store's retention limit; older entries are left out.
+  bool truncated = 6;
+  // Set when the audit store could not be read.
+  yunheshiguang.workspace.v1.UiText problem = 7;
+}
+
+message ReportAuditRequest {
+  // Which entries to count; `before_id` and `limit` are ignored.
+  AuditQuery query = 1;
+  // Minutes east of UTC at which days start, such as 480 for UTC+8.
+  int32 utc_offset_minutes = 2;
+  yunheshiguang.workspace.v1.WorkspaceScope scope = 3 [deprecated = true];
+}
+
+message AuditPage {
+  // Newest first.
+  repeated AuditEntry entries = 1;
+  // Pass as `before_id` to read the next page; empty on the last page.
+  string next_before_id = 2;
+  // Set when the audit store could not be read; `entries` is empty then.
+  yunheshiguang.workspace.v1.UiText problem = 3;
+}
+
+enum AuditExportFormat {
+  AUDIT_EXPORT_FORMAT_UNSPECIFIED = 0;
+  AUDIT_EXPORT_FORMAT_CSV = 1;
+  AUDIT_EXPORT_FORMAT_JSONL = 2;
+}
+
+message ExportAuditRequest {
+  AuditQuery query = 1;
+  AuditExportFormat format = 2;
+  // Where to write the file, chosen by the operator in a save dialog.
+  string path = 3;
+  yunheshiguang.workspace.v1.WorkspaceScope scope = 4 [deprecated = true];
+}
+
+message ExportAuditResult {
+  bool accepted = 1;
+  yunheshiguang.workspace.v1.UiText detail = 2;
+  uint32 exported = 3;
+}
+
+// Names the implementation installed behind one governance contract, so the
+// governance page can say which policy is in force.
+message GovernanceProvider {
+  string id = 1;
+  yunheshiguang.workspace.v1.UiText label = 2;
+  yunheshiguang.workspace.v1.UiText description = 3;
+}
+
+enum LicenseStatus {
+  LICENSE_STATUS_UNSPECIFIED = 0;
+  LICENSE_STATUS_ACTIVE = 1;
+  LICENSE_STATUS_TRIAL = 2;
+  // The license lapsed; its capabilities are no longer granted.
+  LICENSE_STATUS_EXPIRED = 3;
+}
+
+// The license or subscription behind the granted capabilities: the billing side
+// of entitlements. The open-source core has none.
+message License {
+  string plan_id = 1;
+  yunheshiguang.workspace.v1.UiText plan = 2;
+  LicenseStatus status = 3;
+  google.protobuf.Timestamp expires_at = 4;
+  // Who the license is issued to, as the entitlement provider shows it.
+  string licensee = 5;
+}
+
+message GovernanceState {
+  GovernanceProvider authorization = 1;
+  GovernanceProvider entitlements = 2;
+  repeated GovernanceProvider audit_sinks = 3;
+  // Capability keys granted to this build. A workspace module that requires a
+  // capability only mounts once the key is granted.
+  repeated string granted_capabilities = 4;
+  // Most recent first, at most `audit_capacity` entries.
+  repeated AuditEntry audit_trail = 5;
+  uint32 audit_capacity = 6;
+  // Absent when no license is installed.
+  License license = 7;
+  // Who the operator of this computer's windows is, and who says so.
+  GovernanceProvider identity = 8;
+  Operator operator = 9;
+  // Where the audit history is kept and queried.
+  GovernanceProvider audit_store = 10;
+}
+
+message GetGovernanceStateRequest {
+  yunheshiguang.workspace.v1.WorkspaceScope scope = 1 [deprecated = true];
+}
+
+// Who may do what.
+service GovernanceService {
+  // The caller's permissions and the governance providers in use.
+  rpc GetGovernanceState(GetGovernanceStateRequest) returns (GovernanceState) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+    option (yunheshiguang.rpc.v1.local_api) = true;
+  }
+}
+
+// The audit trail of what was done.
+service AuditService {
+  // One page of the audit trail, newest first.
+  rpc QueryAudit(QueryAuditRequest) returns (AuditPage) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+    option (yunheshiguang.rpc.v1.local_api) = true;
+  }
+
+  // Audit entries counted by day, operator, group and action.
+  rpc ReportAudit(ReportAuditRequest) returns (AuditReport) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+    option (yunheshiguang.rpc.v1.local_api) = true;
+  }
+
+  // Writes the audit trail to a file on this computer.
+  rpc ExportAudit(ExportAuditRequest) returns (ExportAuditResult);
+}

@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "assets": [
+    {
+      "name": "yunheshiguang-windows-x86_64-setup.exe",
+      "os": "windows",
+      "arch": "x86_64",
+      "kind": "installer",
+      "bundle": "nsis/*-setup.exe"
+    },
+    {
+      "name": "yunheshiguang-macos-arm64.dmg",
+      "os": "macos",
+      "arch": "arm64",
+      "kind": "disk-image",
+      "bundle": "dmg/*.dmg"
+    },
+    {
+      "name": "yunheshiguang-macos-x86_64.dmg",
+      "os": "macos",
+      "arch": "x86_64",
+      "kind": "disk-image",
+      "bundle": "dmg/*.dmg"
+    },
+    {
+      "name": "yunheshiguang-linux-x86_64.AppImage",
+      "os": "linux",
+      "arch": "x86_64",
+      "kind": "appimage",
+      "bundle": "appimage/*.AppImage"
+    },
+    {
+      "name": "yunheshiguang-linux-x86_64.deb",
+      "os": "linux",
+      "arch": "x86_64",
+      "kind": "deb",
+      "bundle": "deb/*.deb"
+    },
+    {
+      "name": "yunheshiguang-linux-x86_64.rpm",
+      "os": "linux",
+      "arch": "x86_64",
+      "kind": "rpm",
+      "bundle": "rpm/*.rpm"
+    }
+  ],
+  "retired": []
+}

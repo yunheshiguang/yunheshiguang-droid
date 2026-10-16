@@ -1,0 +1,47 @@
+syntax = "proto3";
+
+package yunheshiguang.templates.v1;
+
+import "yunheshiguang/workspace/v1/workspace.proto";
+
+// One step of a template: a batch action and the single value it takes, which
+// may be left empty for the user to fill in.
+message TemplateStep {
+  yunheshiguang.workspace.v1.BatchActionKind kind = 1;
+  string value = 2;
+}
+
+// A reusable automation flow blueprint offered by a template source.
+message FlowTemplate {
+  string id = 1;
+  // Identifier of the source that offers this template.
+  string source_id = 2;
+  yunheshiguang.workspace.v1.UiText name = 3;
+  yunheshiguang.workspace.v1.UiText description = 4;
+  repeated TemplateStep steps = 5;
+}
+
+// Names a template source, such as the built-in starter set or a template market.
+message TemplateSourceInfo {
+  string id = 1;
+  yunheshiguang.workspace.v1.UiText label = 2;
+  yunheshiguang.workspace.v1.UiText description = 3;
+}
+
+message ListFlowTemplatesRequest {
+  yunheshiguang.workspace.v1.WorkspaceScope scope = 1 [deprecated = true];
+}
+
+// Every template the current entitlements unlock, grouped by source.
+message FlowTemplateCatalog {
+  repeated TemplateSourceInfo sources = 1;
+  repeated FlowTemplate templates = 2;
+}
+
+// Flow templates from the installed sources.
+service TemplateService {
+  // Every template the installed sources offer.
+  rpc ListFlowTemplates(ListFlowTemplatesRequest) returns (FlowTemplateCatalog) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+}

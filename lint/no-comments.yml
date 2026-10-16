@@ -1,0 +1,43 @@
+id: no-comments-rust
+language: Rust
+severity: error
+message: Source files carry no comments
+rule:
+  any:
+    - kind: line_comment
+    - kind: block_comment
+---
+id: no-comments-typescript
+language: TypeScript
+severity: error
+message: Source files carry no comments
+rule:
+  kind: comment
+---
+id: no-comments-tsx
+language: Tsx
+severity: error
+message: Source files carry no comments
+rule:
+  kind: comment
+---
+id: no-comments-javascript
+language: JavaScript
+severity: error
+message: Source files carry no comments
+rule:
+  kind: comment
+---
+id: no-comments-css
+language: Css
+severity: error
+message: Source files carry no comments
+rule:
+  kind: comment
+---
+id: no-comments-html
+language: Html
+severity: error
+message: Source files carry no comments
+rule:
+  kind: comment

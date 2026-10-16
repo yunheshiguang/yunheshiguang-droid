@@ -1,0 +1,101 @@
+syntax = "proto3";
+
+package yunheshiguang.api.v1;
+
+import "google/protobuf/timestamp.proto";
+import "yunheshiguang/workspace/v1/workspace.proto";
+
+// The local HTTP and WebSocket API. It listens on the loopback interface only
+// and is off until the operator turns it on.
+message ApiGatewayConfig {
+  bool enabled = 1;
+  // Zero picks the default port.
+  uint32 port = 2;
+}
+
+enum ApiGatewayStatus {
+  API_GATEWAY_STATUS_UNSPECIFIED = 0;
+  API_GATEWAY_STATUS_STOPPED = 1;
+  API_GATEWAY_STATUS_RUNNING = 2;
+  // Turned on but not listening, for example because the port is taken.
+  API_GATEWAY_STATUS_FAILED = 3;
+}
+
+// A token the core issued. The secret itself is shown once, when the token is
+// created; only a digest is kept.
+message ApiToken {
+  string id = 1;
+  string name = 2;
+  google.protobuf.Timestamp created_at = 3;
+  google.protobuf.Timestamp last_used_at = 4;
+}
+
+// One way the gateway recognizes a caller, such as the core's token store or
+// an enterprise identity service an extension provides.
+message ApiAuthenticatorInfo {
+  string id = 1;
+  yunheshiguang.workspace.v1.UiText label = 2;
+  yunheshiguang.workspace.v1.UiText description = 3;
+}
+
+message ApiGatewayState {
+  ApiGatewayConfig config = 1;
+  ApiGatewayStatus status = 2;
+  // The base URL while the gateway listens, for example `http://127.0.0.1:47831`.
+  string address = 3;
+  yunheshiguang.workspace.v1.UiText problem = 4;
+  repeated ApiToken tokens = 5;
+  repeated ApiAuthenticatorInfo authenticators = 6;
+}
+
+message GetApiGatewayRequest {
+  yunheshiguang.workspace.v1.WorkspaceScope scope = 1 [deprecated = true];
+}
+
+message UpdateApiGatewayRequest {
+  ApiGatewayConfig config = 1;
+  yunheshiguang.workspace.v1.WorkspaceScope scope = 2 [deprecated = true];
+}
+
+message CreateApiTokenRequest {
+  string name = 1;
+  yunheshiguang.workspace.v1.WorkspaceScope scope = 2 [deprecated = true];
+}
+
+message RevokeApiTokenRequest {
+  string id = 1;
+  yunheshiguang.workspace.v1.WorkspaceScope scope = 2 [deprecated = true];
+}
+
+// Whether a gateway change was made, and the gateway afterwards.
+message ApiGatewayResult {
+  bool accepted = 1;
+  yunheshiguang.workspace.v1.UiText detail = 2;
+  ApiGatewayState state = 3;
+  // The new token's secret, set only by `create_api_token`. It is not stored.
+  string secret = 4;
+}
+
+// One message on the `/v1/events` WebSocket: a workspace event and its JSON
+// payload, the same pair the desktop windows receive.
+message ApiEvent {
+  string event = 1;
+  string payload_json = 2;
+}
+
+// The local HTTP API and the tokens that open it.
+service ApiGatewayService {
+  // Whether the API listens, where, and the tokens issued.
+  rpc GetApiGateway(GetApiGatewayRequest) returns (ApiGatewayState) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+
+  // Turns the API on or off and sets its port.
+  rpc UpdateApiGateway(UpdateApiGatewayRequest) returns (ApiGatewayResult);
+
+  // Issues a token; its secret is returned only this once.
+  rpc CreateApiToken(CreateApiTokenRequest) returns (ApiGatewayResult);
+
+  // Revokes a token.
+  rpc RevokeApiToken(RevokeApiTokenRequest) returns (ApiGatewayResult);
+}

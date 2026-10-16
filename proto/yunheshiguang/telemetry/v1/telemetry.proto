@@ -1,0 +1,58 @@
+syntax = "proto3";
+
+package yunheshiguang.telemetry.v1;
+
+import "google/protobuf/timestamp.proto";
+import "yunheshiguang/governance/v1/governance.proto";
+import "yunheshiguang/rpc/v1/options.proto";
+import "yunheshiguang/workspace/v1/workspace.proto";
+
+// One pass over the devices the host can see.
+message ProbeHealth {
+  google.protobuf.Timestamp probed_at = 1;
+  uint32 duration_ms = 2;
+  uint32 devices = 3;
+  uint32 online = 4;
+  uint32 unauthorized = 5;
+  uint32 offline = 6;
+}
+
+// How one kind of governed operation has gone since the app started.
+message OperationHealth {
+  yunheshiguang.governance.v1.GovernedAction action = 1;
+  // Which batch action, for batch runs; unspecified for every other operation.
+  yunheshiguang.workspace.v1.BatchActionKind batch_action = 2;
+  uint32 runs = 3;
+  uint32 failures = 4;
+  uint32 average_ms = 5;
+  uint32 slowest_ms = 6;
+  google.protobuf.Timestamp last_finished_at = 7;
+}
+
+// Where telemetry goes, so the health page can say who else receives it.
+message TelemetrySinkInfo {
+  string id = 1;
+  yunheshiguang.workspace.v1.UiText label = 2;
+  yunheshiguang.workspace.v1.UiText description = 3;
+}
+
+message GetWorkspaceHealthRequest {
+  yunheshiguang.workspace.v1.WorkspaceScope scope = 1 [deprecated = true];
+}
+
+message WorkspaceHealth {
+  // Newest first, at most `probe_capacity` entries.
+  repeated ProbeHealth probes = 1;
+  uint32 probe_capacity = 2;
+  repeated OperationHealth operations = 3;
+  repeated TelemetrySinkInfo sinks = 4;
+}
+
+// How the workspace's operations have been doing.
+service TelemetryService {
+  // Recent success rates and timings of operations.
+  rpc GetWorkspaceHealth(GetWorkspaceHealthRequest) returns (WorkspaceHealth) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+    option (yunheshiguang.rpc.v1.local_api) = true;
+  }
+}

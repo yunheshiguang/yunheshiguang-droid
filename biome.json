@@ -1,0 +1,90 @@
+{
+  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
+  },
+  "files": {
+    "includes": [
+      "**",
+      "!src/shared/proto/gen",
+      "!src/shared/i18n/gen",
+      "!src-tauri/src/workspace/api/openapi",
+      "!extensions/*/native/permissions/schemas",
+      "!**/*.svg"
+    ]
+  },
+  "formatter": {
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 100
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "double",
+      "semicolons": "always",
+      "trailingCommas": "all"
+    }
+  },
+  "css": {
+    "parser": {
+      "tailwindDirectives": true
+    }
+  },
+  "linter": {
+    "rules": {
+      "preset": "recommended"
+    }
+  },
+  "overrides": [
+    {
+      "includes": [
+        "src/**",
+        "extensions/*/web/src/**",
+        "!**/*.test.ts",
+        "!**/*.test.tsx",
+        "!src/app/registry/source-scan.ts"
+      ],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noNodejsModules": "error",
+            "noProcessGlobal": "error"
+          },
+          "style": {
+            "noRestrictedGlobals": {
+              "level": "error",
+              "options": {
+                "deniedGlobals": {
+                  "Buffer": "Node.js is not available in the app; use Uint8Array",
+                  "global": "Node.js is not available in the app; use globalThis",
+                  "__dirname": "Node.js is not available in the app",
+                  "__filename": "Node.js is not available in the app"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "assist": {
+    "actions": {
+      "source": {
+        "organizeImports": {
+          "level": "on",
+          "options": {
+            "groups": [
+              [":NODE:", ":PACKAGE:", ":PACKAGE_WITH_PROTOCOL:", ":URL:"],
+              ":BLANK_LINE:",
+              ":ALIAS:",
+              ":BLANK_LINE:",
+              ":PATH:"
+            ]
+          }
+        }
+      }
+    }
+  }
+}

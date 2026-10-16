@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+package yunheshiguang.vendors.v1;
+
+import "yunheshiguang/workspace/v1/workspace.proto";
+
+// A vendor adapter's advice for the devices it recognizes: the switches a
+// brand hides in developer options, or the conventions of a board farm.
+message VendorProfile {
+  string id = 1;
+  yunheshiguang.workspace.v1.UiText label = 2;
+  // What to set on a device of this vendor before debugging it, in order.
+  repeated yunheshiguang.workspace.v1.UiText guidance = 3;
+}
+
+// Which adapter recognized a device. Devices no adapter recognizes are left out.
+message DeviceVendor {
+  string device_id = 1;
+  string vendor_id = 2;
+}
+
+message IdentifyDevicesRequest {
+  repeated string device_ids = 1;
+  yunheshiguang.workspace.v1.WorkspaceScope scope = 2 [deprecated = true];
+}
+
+message DeviceVendors {
+  repeated DeviceVendor devices = 1;
+  // Profiles of the vendors that recognized at least one of the devices.
+  repeated VendorProfile vendors = 2;
+}
+
+// Which vendor makes each device, and what that means for working with it.
+service VendorService {
+  // The vendor of each listed device.
+  rpc IdentifyDevices(IdentifyDevicesRequest) returns (DeviceVendors) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+}

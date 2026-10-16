@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark" />
+    <title>yunheshiguang</title>
+    <style>
+      html,
+      body,
+      #root {
+        height: 100%;
+        margin: 0;
+        background: #f8fafc;
+      }
+
+      html.dark,
+      html.dark body,
+      html.dark #root {
+        background: #020617;
+      }
+
+      #boot-splash {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        background: #f8fafc;
+        color: #0f172a;
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
+        pointer-events: none;
+      }
+
+      html.dark #boot-splash {
+        background: #020617;
+        color: #e2e8f0;
+      }
+
+      #boot-splash .spinner {
+        width: 30px;
+        height: 30px;
+        border-radius: 9999px;
+        border: 3px solid rgba(15, 23, 42, 0.14);
+        border-top-color: rgba(15, 23, 42, 0.72);
+        animation: boot-spin 0.8s linear infinite;
+      }
+
+      html.dark #boot-splash .spinner {
+        border-color: rgba(226, 232, 240, 0.18);
+        border-top-color: rgba(226, 232, 240, 0.9);
+      }
+
+      #boot-splash .label {
+        font-size: 14px;
+        font-weight: 500;
+        letter-spacing: 0;
+      }
+
+      @keyframes boot-spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+    </style>
+    <script>
+      (() => {
+        const root = document.documentElement;
+        let snapshot = null;
+
+        try {
+          snapshot = JSON.parse(localStorage.getItem("yunheshiguang.boot") ?? "null");
+        } catch {
+          snapshot = null;
+        }
+
+        if (snapshot && typeof snapshot === "object") {
+          if (snapshot.themeClass) {
+            root.classList.add(snapshot.themeClass);
+          }
+          root.style.colorScheme = snapshot.colorScheme === "dark" ? "dark" : "light";
+          if (snapshot.lang) {
+            root.lang = snapshot.lang;
+          }
+          if (snapshot.loadingLabel) {
+            root.dataset.bootLabel = snapshot.loadingLabel;
+          }
+          return;
+        }
+
+        const dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+        root.classList.toggle("dark", dark);
+        root.style.colorScheme = dark ? "dark" : "light";
+        if (navigator.language.toLowerCase().startsWith("zh")) {
+          root.lang = "zh-CN";
+          root.dataset.bootLabel = "正在加载…";
+        }
+      })();
+    </script>
+    <script type="module" src="/src/main.tsx" defer></script>
+  </head>
+
+  <body>
+    <div id="boot-splash" aria-hidden="true">
+      <div class="spinner"></div>
+      <div class="label">Loading…</div>
+    </div>
+    <script>
+      if (document.documentElement.dataset.bootLabel) {
+        document.querySelector("#boot-splash .label").textContent =
+          document.documentElement.dataset.bootLabel;
+      }
+    </script>
+    <div id="root"></div>
+  </body>
+</html>

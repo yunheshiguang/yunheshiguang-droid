@@ -1,0 +1,109 @@
+syntax = "proto3";
+
+package yunheshiguang.cloud.v1;
+
+import "yunheshiguang/connection/v1/connection.proto";
+import "yunheshiguang/rpc/v1/options.proto";
+import "yunheshiguang/workspace/v1/workspace.proto";
+
+enum CloudPhoneStatus {
+  // The provider cannot tell, for example a phone registered by address.
+  CLOUD_PHONE_STATUS_UNSPECIFIED = 0;
+  CLOUD_PHONE_STATUS_RUNNING = 1;
+  CLOUD_PHONE_STATUS_STOPPED = 2;
+  CLOUD_PHONE_STATUS_STARTING = 3;
+  CLOUD_PHONE_STATUS_STOPPING = 4;
+  CLOUD_PHONE_STATUS_FAILED = 5;
+}
+
+// One source of cloud phones: the core's phones registered by address, or a
+// vendor an extension connects to.
+message CloudProviderInfo {
+  string id = 1;
+  yunheshiguang.workspace.v1.UiText label = 2;
+  yunheshiguang.workspace.v1.UiText description = 3;
+  bool can_start = 4;
+  bool can_stop = 5;
+  // Accepts phones added by address.
+  bool can_register = 6;
+}
+
+message CloudPhone {
+  string provider_id = 1;
+  // Unique within the provider.
+  string id = 2;
+  string name = 3;
+  CloudPhoneStatus status = 4;
+  // Where adb reaches it; unset while the provider has no address for it.
+  yunheshiguang.connection.v1.NetworkEndpoint endpoint = 5;
+  yunheshiguang.workspace.v1.UiText detail = 6;
+}
+
+// A provider that could not list its phones, and why.
+message ProviderProblem {
+  string provider_id = 1;
+  yunheshiguang.workspace.v1.UiText problem = 2;
+}
+
+message ListCloudPhonesRequest {
+  yunheshiguang.workspace.v1.WorkspaceScope scope = 1 [deprecated = true];
+}
+
+message CloudPhones {
+  // Contributed providers first, then the core's.
+  repeated CloudProviderInfo providers = 1;
+  repeated CloudPhone phones = 2;
+  repeated ProviderProblem problems = 3;
+}
+
+// Start, stop, or remove one phone.
+message CloudPhoneRequest {
+  string provider_id = 1;
+  string phone_id = 2;
+  yunheshiguang.workspace.v1.WorkspaceScope scope = 3 [deprecated = true];
+}
+
+message RegisterCloudPhoneRequest {
+  string name = 1;
+  yunheshiguang.connection.v1.NetworkEndpoint endpoint = 2;
+  yunheshiguang.workspace.v1.WorkspaceScope scope = 3 [deprecated = true];
+}
+
+message CloudPhoneResult {
+  bool accepted = 1;
+  yunheshiguang.workspace.v1.UiText detail = 2;
+  CloudPhone phone = 3;
+}
+
+// Payload of `workspace:cloud-phones-changed`, sent after a phone was started,
+// stopped, registered, or removed.
+message CloudPhonesChanged {}
+
+// Cloud phones from the installed providers.
+service CloudService {
+  // Every provider's phones and their status.
+  rpc ListCloudPhones(ListCloudPhonesRequest) returns (CloudPhones) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+    option (yunheshiguang.rpc.v1.local_api) = true;
+  }
+
+  // Starts a cloud phone.
+  rpc StartCloudPhone(CloudPhoneRequest) returns (CloudPhoneResult) {
+    option (yunheshiguang.rpc.v1.local_api) = true;
+  }
+
+  // Stops a cloud phone.
+  rpc StopCloudPhone(CloudPhoneRequest) returns (CloudPhoneResult) {
+    option (yunheshiguang.rpc.v1.local_api) = true;
+  }
+
+  // Registers a cloud phone by its adb address.
+  rpc RegisterCloudPhone(RegisterCloudPhoneRequest) returns (CloudPhoneResult) {
+    option (yunheshiguang.rpc.v1.local_api) = true;
+  }
+
+  // Removes a registered cloud phone.
+  rpc RemoveCloudPhone(CloudPhoneRequest) returns (CloudPhoneResult) {
+    option (yunheshiguang.rpc.v1.local_api) = true;
+  }
+}

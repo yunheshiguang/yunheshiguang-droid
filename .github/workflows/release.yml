@@ -1,0 +1,158 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: The tag to release, such as v0.2.0 or v0.2.0-rc.1. The app version has to match it without the v.
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ inputs.tag }}
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    name: Plan the release
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    outputs:
+      version: ${{ steps.plan.outputs.version }}
+      prerelease: ${{ steps.plan.outputs.prerelease }}
+      previous: ${{ steps.plan.outputs.previous }}
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      TAG: ${{ inputs.tag }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Install Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: package.json
+
+      - name: Check the tag and the app version
+        id: plan
+        run: |
+          if ! [[ "$TAG" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z]+(\.[0-9A-Za-z]+)*)?$ ]]; then
+            echo "::error::$TAG is not a release tag such as v1.2.3 or v1.2.3-rc.1"
+            exit 1
+          fi
+          version="${TAG#v}"
+          node scripts/release/release.mjs version --expect "$version"
+
+          tagged=$(git rev-parse --verify --quiet "refs/tags/$TAG^{commit}" || true)
+          if [ -n "$tagged" ] && [ "$tagged" != "$GITHUB_SHA" ]; then
+            echo "::error::$TAG points at $tagged, but this run is for $GITHUB_SHA. Run the workflow on the tagged commit."
+            exit 1
+          fi
+          if [ "$(gh release view "$TAG" --json isDraft --jq .isDraft 2>/dev/null)" = "false" ]; then
+            echo "::error::$TAG is already published"
+            exit 1
+          fi
+
+          excludes=(--exclude "$TAG")
+          if [[ "$version" != *-* ]]; then
+            excludes+=(--exclude 'v*-*')
+          fi
+          previous=$(git describe --tags --abbrev=0 --match 'v*' "${excludes[@]}" "$GITHUB_SHA" 2>/dev/null || true)
+          {
+            echo "version=$version"
+            echo "prerelease=$([[ "$version" == *-* ]] && echo true || echo false)"
+            echo "previous=$previous"
+          } >> "$GITHUB_OUTPUT"
+
+  ci:
+    name: CI
+    needs: plan
+    uses: ./.github/workflows/ci.yml
+
+  installers:
+    name: Build
+    needs: [plan, ci]
+    uses: ./.github/workflows/installers.yml
+    with:
+      channel: release
+
+  publish:
+    name: Draft the release
+    needs: [plan, installers]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      TAG: ${{ inputs.tag }}
+      VERSION: ${{ needs.plan.outputs.version }}
+      PRERELEASE: ${{ needs.plan.outputs.prerelease }}
+      PREVIOUS: ${{ needs.plan.outputs.previous }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Install Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: package.json
+
+      - name: Download installers
+        uses: actions/download-artifact@v8
+        with:
+          pattern: installers-*
+          path: release-assets
+          merge-multiple: true
+
+      - name: Check the installers against the asset list
+        run: node scripts/release/release.mjs verify release-assets
+
+      - name: Write checksums, manifest, and notes
+        run: |
+          previous=""
+          if [ -n "$PREVIOUS" ]; then
+            previous=$(git rev-parse "refs/tags/$PREVIOUS^{commit}")
+          fi
+          details=(--repo "$GH_REPO" --tag "$TAG" --channel release --commit "$GITHUB_SHA" --date "$(date -u +%F)" --version "$VERSION")
+          node scripts/release/release.mjs checksums release-assets -o release-assets/SHA256SUMS
+          node scripts/release/release.mjs manifest release-assets "${details[@]}" -o release-assets/release.json
+          node scripts/release/release.mjs notes "${details[@]}" --previous "$previous" --since "$PREVIOUS" -o notes.md
+
+      - name: Draft the release
+        run: |
+          shopt -s nullglob
+          installers=(release-assets/yunheshiguang-*)
+          flags=()
+          if [ "$PRERELEASE" = "true" ]; then
+            flags+=(--prerelease)
+          fi
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            scripts/retry.sh 3 10 gh release edit "$TAG" --draft --title "$TAG" --notes-file notes.md "${flags[@]}"
+          else
+            scripts/retry.sh 3 10 gh release create "$TAG" --draft --target "$GITHUB_SHA" --title "$TAG" --notes-file notes.md "${flags[@]}"
+          fi
+          scripts/retry.sh 3 15 gh release upload "$TAG" "${installers[@]}" --clobber
+          scripts/retry.sh 3 15 gh release upload "$TAG" release-assets/SHA256SUMS release-assets/release.json --clobber
+          gh release view "$TAG" --json assets --jq '.assets[].name' | while read -r name; do
+            if [ ! -f "release-assets/$name" ]; then
+              scripts/retry.sh 3 10 gh release delete-asset "$TAG" "$name" --yes
+            fi
+          done
+
+      - name: Check the draft
+        run: |
+          gh release view "$TAG" --json assets > published.json
+          node scripts/release/release.mjs uploaded release-assets published.json
+          echo "Review the draft and publish it: $(gh release view "$TAG" --json url --jq .url)" >> "$GITHUB_STEP_SUMMARY"

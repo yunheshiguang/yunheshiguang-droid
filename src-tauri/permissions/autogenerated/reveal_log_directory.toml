@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-reveal-log-directory"
+description = "Enables the reveal_log_directory command without any pre-configured scope."
+commands.allow = ["reveal_log_directory"]
+
+[[permission]]
+identifier = "deny-reveal-log-directory"
+description = "Denies the reveal_log_directory command without any pre-configured scope."
+commands.deny = ["reveal_log_directory"]

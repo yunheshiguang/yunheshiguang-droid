@@ -1,0 +1,213 @@
+syntax = "proto3";
+
+package yunheshiguang.scrcpy.v1;
+
+import "google/protobuf/timestamp.proto";
+import "yunheshiguang/rpc/v1/options.proto";
+
+enum ScrcpyBinarySource {
+  SCRCPY_BINARY_SOURCE_UNSPECIFIED = 0;
+  SCRCPY_BINARY_SOURCE_SYSTEM_PATH = 1;
+  SCRCPY_BINARY_SOURCE_MANUAL_DIRECTORY = 2;
+  SCRCPY_BINARY_SOURCE_APP_PRIVATE = 3;
+}
+
+enum ScrcpyBinaryKind {
+  SCRCPY_BINARY_KIND_UNSPECIFIED = 0;
+  SCRCPY_BINARY_KIND_CLIENT = 1;
+  SCRCPY_BINARY_KIND_SERVER = 2;
+  SCRCPY_BINARY_KIND_ADB = 3;
+}
+
+enum ScrcpyPackageKind {
+  SCRCPY_PACKAGE_KIND_UNSPECIFIED = 0;
+  SCRCPY_PACKAGE_KIND_WINDOWS_X86 = 1;
+  SCRCPY_PACKAGE_KIND_WINDOWS_X64 = 2;
+  SCRCPY_PACKAGE_KIND_MACOS_X86_64 = 3;
+  SCRCPY_PACKAGE_KIND_MACOS_AARCH64 = 4;
+  SCRCPY_PACKAGE_KIND_LINUX_X86_64 = 5;
+  SCRCPY_PACKAGE_KIND_WINDOWS_ARM64 = 6;
+}
+
+enum ScrcpyInstallStatus {
+  SCRCPY_INSTALL_STATUS_UNSPECIFIED = 0;
+  SCRCPY_INSTALL_STATUS_NOT_INSTALLED = 1;
+  SCRCPY_INSTALL_STATUS_INSTALLED = 2;
+  SCRCPY_INSTALL_STATUS_INSTALLING = 3;
+  SCRCPY_INSTALL_STATUS_FAILED = 4;
+}
+
+enum ScrcpyConnectionHealth {
+  SCRCPY_CONNECTION_HEALTH_UNSPECIFIED = 0;
+  SCRCPY_CONNECTION_HEALTH_READY = 1;
+  SCRCPY_CONNECTION_HEALTH_DEGRADED = 2;
+  SCRCPY_CONNECTION_HEALTH_RECOVERING = 3;
+  SCRCPY_CONNECTION_HEALTH_BLOCKED = 4;
+}
+
+enum ScrcpySessionStatus {
+  SCRCPY_SESSION_STATUS_UNSPECIFIED = 0;
+  SCRCPY_SESSION_STATUS_IDLE = 1;
+  SCRCPY_SESSION_STATUS_STARTING = 2;
+  SCRCPY_SESSION_STATUS_RUNNING = 3;
+  SCRCPY_SESSION_STATUS_STOPPING = 4;
+  SCRCPY_SESSION_STATUS_FAILED = 5;
+}
+
+enum ScrcpyCaptureOrientation {
+  SCRCPY_CAPTURE_ORIENTATION_UNSPECIFIED = 0;
+  SCRCPY_CAPTURE_ORIENTATION_ROTATION_0 = 1;
+  SCRCPY_CAPTURE_ORIENTATION_ROTATION_90 = 2;
+  SCRCPY_CAPTURE_ORIENTATION_ROTATION_180 = 3;
+  SCRCPY_CAPTURE_ORIENTATION_ROTATION_270 = 4;
+}
+
+enum ScrcpyDiagnosticCode {
+  SCRCPY_DIAGNOSTIC_CODE_UNSPECIFIED = 0;
+  SCRCPY_DIAGNOSTIC_CODE_NONE = 1;
+  SCRCPY_DIAGNOSTIC_CODE_UNAVAILABLE = 2;
+  SCRCPY_DIAGNOSTIC_CODE_INVALID_DIRECTORY = 3;
+  SCRCPY_DIAGNOSTIC_CODE_BINARY_MISSING = 4;
+  SCRCPY_DIAGNOSTIC_CODE_ADB_UNAVAILABLE = 5;
+  SCRCPY_DIAGNOSTIC_CODE_ADB_MISSING = 6;
+  SCRCPY_DIAGNOSTIC_CODE_INVALID_SERIAL = 7;
+  SCRCPY_DIAGNOSTIC_CODE_INVALID_ARGUMENT = 8;
+  SCRCPY_DIAGNOSTIC_CODE_ALREADY_RUNNING = 9;
+  SCRCPY_DIAGNOSTIC_CODE_LAUNCH_FAILED = 10;
+  SCRCPY_DIAGNOSTIC_CODE_STOP_FAILED = 11;
+  SCRCPY_DIAGNOSTIC_CODE_CHECKSUM_MISMATCH = 12;
+  SCRCPY_DIAGNOSTIC_CODE_DOWNLOAD_FAILED = 13;
+  SCRCPY_DIAGNOSTIC_CODE_ARCHIVE_INVALID = 14;
+  SCRCPY_DIAGNOSTIC_CODE_INSTALL_FAILED = 15;
+  SCRCPY_DIAGNOSTIC_CODE_UNSUPPORTED_PACKAGE = 16;
+  // The installed authorization provider refused the operation.
+  SCRCPY_DIAGNOSTIC_CODE_NOT_AUTHORIZED = 17;
+}
+
+message ScrcpyUiText {
+  string key = 1;
+  map<string, string> params = 2;
+  string fallback = 3;
+}
+
+message ScrcpyWindowScope {
+  string window_label = 1;
+}
+
+message ScrcpyConfig {
+  ScrcpyBinarySource source = 1;
+  string scrcpy_root = 2;
+  bool video_enabled = 3;
+  bool audio_enabled = 4;
+  bool control_enabled = 5;
+  uint32 max_size = 6;
+  uint64 video_bit_rate_bps = 7;
+  uint32 max_fps = 8;
+  bool turn_screen_off = 9;
+  bool stay_awake = 10;
+  bool show_touches = 11;
+  bool keep_active = 12;
+  bool fullscreen = 13;
+  bool always_on_top = 14;
+  string window_title = 15;
+  string crop = 16;
+  ScrcpyCaptureOrientation capture_orientation = 17;
+}
+
+message ScrcpyBinary {
+  ScrcpyBinaryKind kind = 1;
+  string resolved_path = 2;
+  bool available = 3;
+}
+
+message ScrcpyInstall {
+  ScrcpyInstallStatus status = 1;
+  ScrcpyPackageKind package_kind = 2;
+  string release_tag = 3;
+  string install_root = 4;
+  string source_url = 5;
+  string server_url = 6;
+  google.protobuf.Timestamp installed_at = 7;
+  string last_error = 8;
+  ScrcpyDiagnosticCode last_error_code = 9;
+}
+
+message ScrcpySession {
+  string id = 1;
+  string window_label = 2;
+  string serial = 3;
+  ScrcpySessionStatus status = 4;
+  uint32 pid = 5;
+  string last_error = 6;
+  ScrcpyDiagnosticCode last_error_code = 7;
+}
+
+message ScrcpyDiagnosticSignal {
+  string id = 1;
+  ScrcpyDiagnosticCode code = 2;
+  ScrcpyConnectionHealth health = 3;
+  ScrcpyUiText title = 4;
+  ScrcpyUiText impact = 5;
+  ScrcpyUiText recovery = 6;
+}
+
+message ScrcpyState {
+  ScrcpyConfig config = 1;
+  repeated ScrcpyBinary binaries = 2;
+  string adb_path = 3;
+  repeated ScrcpySession sessions = 4;
+  repeated ScrcpyDiagnosticSignal diagnostics = 5;
+  ScrcpyConnectionHealth health = 6;
+  ScrcpyInstall install = 7;
+}
+
+message GetScrcpyStateRequest {
+  ScrcpyWindowScope scope = 1;
+}
+
+message UpdateScrcpyConfigRequest {
+  ScrcpyWindowScope scope = 1;
+  ScrcpyConfig config = 2;
+}
+
+message InstallScrcpyRequest {
+  ScrcpyWindowScope scope = 1;
+  ScrcpyPackageKind package_kind = 2;
+}
+
+message LaunchScrcpySessionRequest {
+  ScrcpyWindowScope scope = 1;
+  string serial = 2;
+  ScrcpyConfig config = 3;
+}
+
+message StopScrcpySessionRequest {
+  ScrcpyWindowScope scope = 1;
+  string session_id = 2;
+  string serial = 3;
+}
+
+// Mirroring device screens with scrcpy.
+service ScrcpyService {
+  // The scrcpy installation, its settings and the open mirrors.
+  rpc GetScrcpyState(GetScrcpyStateRequest) returns (ScrcpyState) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+    option (yunheshiguang.rpc.v1.local_api) = true;
+  }
+
+  // Changes where scrcpy comes from and how it mirrors.
+  rpc UpdateScrcpyConfig(UpdateScrcpyConfigRequest) returns (ScrcpyState);
+
+  // Downloads and installs the official scrcpy release.
+  rpc InstallScrcpy(InstallScrcpyRequest) returns (ScrcpyState);
+
+  // Opens a mirror of a device.
+  rpc LaunchScrcpySession(LaunchScrcpySessionRequest) returns (ScrcpyState) {
+    option (yunheshiguang.rpc.v1.local_api) = true;
+  }
+
+  // Closes a mirror.
+  rpc StopScrcpySession(StopScrcpySessionRequest) returns (ScrcpyState) {
+    option (yunheshiguang.rpc.v1.local_api) = true;
+  }
+}

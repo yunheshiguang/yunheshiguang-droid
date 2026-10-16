@@ -1,0 +1,11 @@
+version: v2
+inputs:
+  - directory: proto
+
+plugins:
+  - local: protoc-gen-es
+    out: src/shared/proto/gen
+    opt:
+      - target=ts
+      - import_extension=js
+      - json_types=true

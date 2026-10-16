@@ -1,0 +1,97 @@
+syntax = "proto3";
+
+package yunheshiguang.profiles.v1;
+
+import "yunheshiguang/rpc/v1/options.proto";
+import "yunheshiguang/workspace/v1/workspace.proto";
+
+// What the operator wrote down about one device. Each profile is one document
+// in the `device-profiles` collection, so a sync-folder or remote document
+// store carries profiles between machines like any other document.
+message DeviceProfile {
+  // The hardware serial (`ro.serialno`) when the device reports a unique one,
+  // otherwise its adb serial. The hardware serial stays the same over USB and
+  // over the network, so the profile follows the device between them.
+  string device_key = 1;
+  // Zero when no number is assigned.
+  uint32 number = 2;
+  string alias = 3;
+  string note = 4;
+  repeated string tags = 5;
+  // Empty when the device is in no group. A group that no longer exists counts
+  // as no group.
+  string group_id = 6;
+}
+
+// A group the operator created. Each group is one document in the
+// `device-groups` collection.
+message DeviceGroupDefinition {
+  // Letters, digits, `-` and `_`; a UUID fits.
+  string id = 1;
+  string name = 2;
+  yunheshiguang.workspace.v1.GroupTone tone = 3;
+}
+
+// Changes applied to every listed device. Unset fields keep their value.
+message DeviceProfilePatch {
+  // The first device gets this number and each following device the next
+  // one. Zero clears the number.
+  optional uint32 number = 1;
+  // Empty clears the alias.
+  optional string alias = 2;
+  // Empty clears the note.
+  optional string note = 3;
+  repeated string add_tags = 4;
+  repeated string remove_tags = 5;
+  // Empty takes the devices out of every group.
+  optional string group_id = 6;
+}
+
+message UpdateDeviceProfilesRequest {
+  // Device ids from the snapshot, in the order numbers are assigned.
+  repeated string device_ids = 1;
+  DeviceProfilePatch patch = 2;
+  yunheshiguang.workspace.v1.WorkspaceScope scope = 3 [deprecated = true];
+}
+
+message SaveDeviceGroupRequest {
+  // Created when the id is new, replaced otherwise.
+  DeviceGroupDefinition group = 1;
+  yunheshiguang.workspace.v1.WorkspaceScope scope = 2 [deprecated = true];
+}
+
+message RemoveDeviceGroupRequest {
+  string id = 1;
+  yunheshiguang.workspace.v1.WorkspaceScope scope = 2 [deprecated = true];
+}
+
+// Whether a change to profiles or groups was made.
+message OrganizeResult {
+  bool accepted = 1;
+  // Why the change was refused or failed. Unset when it was made.
+  yunheshiguang.workspace.v1.UiText detail = 2;
+  // Profiles or groups written.
+  uint32 updated = 3;
+}
+
+// Payload of the `workspace:device-profiles-changed` event, sent after a
+// profile or group changes so every window reads the snapshot again.
+message DeviceProfilesChanged {}
+
+// Device profiles and the groups devices are organized in.
+service ProfileService {
+  // Changes the profiles of the listed devices.
+  rpc UpdateDeviceProfiles(UpdateDeviceProfilesRequest) returns (OrganizeResult) {
+    option (yunheshiguang.rpc.v1.local_api) = true;
+  }
+
+  // Creates or renames a group.
+  rpc SaveDeviceGroup(SaveDeviceGroupRequest) returns (OrganizeResult) {
+    option (yunheshiguang.rpc.v1.local_api) = true;
+  }
+
+  // Removes a group; its devices become ungrouped.
+  rpc RemoveDeviceGroup(RemoveDeviceGroupRequest) returns (OrganizeResult) {
+    option (yunheshiguang.rpc.v1.local_api) = true;
+  }
+}

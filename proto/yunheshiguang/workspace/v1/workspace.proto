@@ -1,0 +1,423 @@
+syntax = "proto3";
+
+package yunheshiguang.workspace.v1;
+
+import "google/protobuf/timestamp.proto";
+import "yunheshiguang/adb/v1/adb.proto";
+import "yunheshiguang/rpc/v1/options.proto";
+import "yunheshiguang/scrcpy/v1/scrcpy.proto";
+
+enum VisibilityMode {
+  VISIBILITY_MODE_UNSPECIFIED = 0;
+  VISIBILITY_MODE_VISIBLE = 1;
+  VISIBILITY_MODE_MASKED = 2;
+  VISIBILITY_MODE_SEARCHABLE = 3;
+}
+
+enum PiiClass {
+  PII_CLASS_UNSPECIFIED = 0;
+  PII_CLASS_NONE = 1;
+  PII_CLASS_DEVICE_IDENTIFIER = 2;
+  PII_CLASS_DEVICE_MODEL = 3;
+  PII_CLASS_OPERATOR_NAME = 4;
+  PII_CLASS_ACCOUNT = 5;
+  PII_CLASS_LOCATION = 6;
+  PII_CLASS_NOTE = 7;
+}
+
+enum DeviceStatus {
+  DEVICE_STATUS_UNSPECIFIED = 0;
+  DEVICE_STATUS_ONLINE = 1;
+  DEVICE_STATUS_BUSY = 2;
+  DEVICE_STATUS_IDLE = 3;
+  DEVICE_STATUS_WARNING = 4;
+  DEVICE_STATUS_OFFLINE = 5;
+}
+
+enum ConnectionType {
+  CONNECTION_TYPE_UNSPECIFIED = 0;
+  CONNECTION_TYPE_USB = 1;
+  CONNECTION_TYPE_WIFI = 2;
+  CONNECTION_TYPE_OTG = 3;
+  CONNECTION_TYPE_NETWORK_SCAN = 4;
+  CONNECTION_TYPE_CLOUD = 5;
+}
+
+enum TaskStatus {
+  TASK_STATUS_UNSPECIFIED = 0;
+  TASK_STATUS_QUEUED = 1;
+  TASK_STATUS_RUNNING = 2;
+  TASK_STATUS_DONE = 3;
+  TASK_STATUS_BLOCKED = 4;
+  TASK_STATUS_FAILED = 5;
+  TASK_STATUS_RETRYING = 6;
+}
+
+enum GroupTone {
+  GROUP_TONE_UNSPECIFIED = 0;
+  GROUP_TONE_EMERALD = 1;
+  GROUP_TONE_SKY = 2;
+  GROUP_TONE_VIOLET = 3;
+  GROUP_TONE_AMBER = 4;
+  GROUP_TONE_ROSE = 5;
+  GROUP_TONE_SLATE = 6;
+}
+
+enum ConnectionHealth {
+  CONNECTION_HEALTH_UNSPECIFIED = 0;
+  CONNECTION_HEALTH_READY = 1;
+  CONNECTION_HEALTH_DEGRADED = 2;
+  CONNECTION_HEALTH_RECOVERING = 3;
+  CONNECTION_HEALTH_BLOCKED = 4;
+}
+
+enum AndroidPlatformToolsSource {
+  ANDROID_PLATFORM_TOOLS_SOURCE_UNSPECIFIED = 0;
+  ANDROID_PLATFORM_TOOLS_SOURCE_SYSTEM_PATH = 1;
+  ANDROID_PLATFORM_TOOLS_SOURCE_MANUAL_DIRECTORY = 2;
+  ANDROID_PLATFORM_TOOLS_SOURCE_APP_PRIVATE = 3;
+}
+
+enum AndroidPlatformToolsBinaryKind {
+  ANDROID_PLATFORM_TOOLS_BINARY_KIND_UNSPECIFIED = 0;
+  ANDROID_PLATFORM_TOOLS_BINARY_KIND_ADB = 1;
+  ANDROID_PLATFORM_TOOLS_BINARY_KIND_FASTBOOT = 2;
+}
+
+enum AndroidPlatformToolsPackageKind {
+  ANDROID_PLATFORM_TOOLS_PACKAGE_KIND_UNSPECIFIED = 0;
+  ANDROID_PLATFORM_TOOLS_PACKAGE_KIND_WINDOWS = 1;
+  ANDROID_PLATFORM_TOOLS_PACKAGE_KIND_MACOS = 2;
+  ANDROID_PLATFORM_TOOLS_PACKAGE_KIND_LINUX = 3;
+}
+
+enum AndroidPlatformToolsInstallStatus {
+  ANDROID_PLATFORM_TOOLS_INSTALL_STATUS_UNSPECIFIED = 0;
+  ANDROID_PLATFORM_TOOLS_INSTALL_STATUS_NOT_INSTALLED = 1;
+  ANDROID_PLATFORM_TOOLS_INSTALL_STATUS_INSTALLED = 2;
+  ANDROID_PLATFORM_TOOLS_INSTALL_STATUS_INSTALLING = 3;
+  ANDROID_PLATFORM_TOOLS_INSTALL_STATUS_FAILED = 4;
+}
+
+enum DiagnosticCode {
+  DIAGNOSTIC_CODE_UNSPECIFIED = 0;
+  DIAGNOSTIC_CODE_NONE = 1;
+  DIAGNOSTIC_CODE_ADB_CONFLICT = 2;
+  DIAGNOSTIC_CODE_WEBVIEW2_MISSING = 3;
+  DIAGNOSTIC_CODE_USB_UNAUTHORIZED = 4;
+  DIAGNOSTIC_CODE_VENDOR_PERMISSION = 5;
+  DIAGNOSTIC_CODE_ROUTER_CONGESTION = 6;
+  DIAGNOSTIC_CODE_ANDROID_SECURITY_LIMIT = 7;
+  DIAGNOSTIC_CODE_DEVICE_OFFLINE = 8;
+  DIAGNOSTIC_CODE_ANDROID_PLATFORM_TOOLS_UNAVAILABLE = 9;
+  DIAGNOSTIC_CODE_ANDROID_PLATFORM_TOOLS_INVALID_DIRECTORY = 10;
+  DIAGNOSTIC_CODE_ANDROID_PLATFORM_TOOLS_ADB_MISSING = 11;
+  DIAGNOSTIC_CODE_ANDROID_PLATFORM_TOOLS_FASTBOOT_MISSING = 12;
+  DIAGNOSTIC_CODE_ANDROID_PLATFORM_TOOLS_DOWNLOAD_FAILED = 13;
+  DIAGNOSTIC_CODE_ANDROID_PLATFORM_TOOLS_ARCHIVE_INVALID = 14;
+  DIAGNOSTIC_CODE_ANDROID_PLATFORM_TOOLS_INSTALL_FAILED = 15;
+  DIAGNOSTIC_CODE_ADB_COMMAND_TIMEOUT = 16;
+  DIAGNOSTIC_CODE_ADB_PERMISSION_DENIED = 17;
+  DIAGNOSTIC_CODE_ADB_NO_PERMISSIONS = 18;
+  DIAGNOSTIC_CODE_ADB_OUTPUT_INVALID = 19;
+  DIAGNOSTIC_CODE_ANDROID_PLATFORM_TOOLS_INTEGRITY_FAILED = 20;
+  DIAGNOSTIC_CODE_ANDROID_PLATFORM_TOOLS_HOST_UNSUPPORTED = 21;
+  // State was recovered from a backup or reset after persisted data was invalid.
+  DIAGNOSTIC_CODE_ANDROID_PLATFORM_TOOLS_STATE_RECOVERED = 22;
+  // The installed authorization provider refused the operation.
+  DIAGNOSTIC_CODE_ACTION_NOT_AUTHORIZED = 23;
+}
+
+// Payload of the `workspace:devices-changed` event, sent when the ADB server
+// reports that a device was attached, detached, or changed state.
+message DevicesChanged {}
+
+enum BatchActionKind {
+  BATCH_ACTION_KIND_UNSPECIFIED = 0;
+  BATCH_ACTION_KIND_SCREENSHOT = 1;
+  BATCH_ACTION_KIND_SCREEN_RECORD = 2;
+  BATCH_ACTION_KIND_INSTALL_APK = 3;
+  BATCH_ACTION_KIND_UPLOAD_FILE = 4;
+  BATCH_ACTION_KIND_INPUT_TEXT = 5;
+  BATCH_ACTION_KIND_LAUNCH_APP = 6;
+  BATCH_ACTION_KIND_CLIPBOARD_WRITE = 7;
+  BATCH_ACTION_KIND_RECOVER_CONNECTION = 8;
+  // Run a script from the library; the request names it by `script_id`.
+  BATCH_ACTION_KIND_RUN_SCRIPT = 9;
+  // Uninstall the app named by `package_name`.
+  BATCH_ACTION_KIND_UNINSTALL_APP = 10;
+  // Clear the data and cache of the app named by `package_name`.
+  BATCH_ACTION_KIND_CLEAR_APP_DATA = 11;
+  // Force-stop the app named by `package_name`.
+  BATCH_ACTION_KIND_STOP_APP = 12;
+}
+
+// A value that can be displayed and searched without leaking what it masks.
+//
+// Unless `pii_class` is PII_CLASS_NONE, `display_value`, `canonical_value`, and
+// `aliases` are all sensitive. While the operator has not revealed sensitive
+// data, clients may display and index only `redacted_value`.
+message SearchableText {
+  // The raw value.
+  string display_value = 1;
+  // The raw value normalized for matching.
+  string canonical_value = 2;
+  // Additional match terms, as sensitive as the raw value.
+  repeated string aliases = 3;
+  // A masked form that is always safe to display and index.
+  string redacted_value = 4;
+  PiiClass pii_class = 5;
+  VisibilityMode visibility = 6;
+  bool searchable = 7;
+}
+
+message UiText {
+  string key = 1;
+  map<string, string> params = 2;
+  string fallback = 3;
+}
+
+// Ignored. The backend identifies the calling window, or the local API token,
+// by itself.
+message WorkspaceScope {
+  option deprecated = true;
+  string window_label = 1;
+}
+
+message GetWorkspaceSnapshotRequest {
+  WorkspaceScope scope = 1 [deprecated = true];
+}
+
+message AndroidPlatformToolsConfig {
+  AndroidPlatformToolsSource source = 1;
+  string platform_tools_root = 2;
+}
+
+message AndroidPlatformToolsInstall {
+  AndroidPlatformToolsInstallStatus status = 1;
+  AndroidPlatformToolsPackageKind package_kind = 2;
+  string install_root = 3;
+  string platform_tools_root = 4;
+  string source_url = 5;
+  google.protobuf.Timestamp installed_at = 6;
+  string last_error = 7;
+  DiagnosticCode last_error_code = 8;
+  string version = 9;
+  string sha256 = 10;
+}
+
+message AndroidPlatformToolsBinary {
+  AndroidPlatformToolsBinaryKind kind = 1;
+  string resolved_path = 2;
+  bool available = 3;
+}
+
+message AndroidPlatformToolsState {
+  AndroidPlatformToolsConfig config = 1;
+  string adb_path = 2;
+  string fastboot_path = 3;
+  repeated AndroidPlatformToolsBinary binaries = 4;
+  repeated DiagnosticSignal diagnostics = 5;
+  ConnectionHealth health = 6;
+  // The installation currently selected as the rollback-safe private runtime.
+  AndroidPlatformToolsInstall install = 7;
+  // The latest install attempt, which may have failed while `install` remains usable.
+  AndroidPlatformToolsInstall last_install_attempt = 8;
+}
+
+message DeviceRecord {
+  string id = 1;
+  SearchableText name = 2;
+  SearchableText model = 3;
+  UiText group = 4;
+  DeviceStatus status = 5;
+  optional uint32 battery_percent = 6;
+  optional uint32 fps = 7;
+  optional uint32 latency_ms = 8;
+  ConnectionType connection = 9;
+  UiText note = 10;
+  repeated SearchableText tags = 11;
+  ConnectionHealth health = 12;
+  DiagnosticCode diagnostic = 13;
+  uint32 selected_rank = 14;
+  string group_id = 15;
+  // What the operator wrote down about the device. Unset when it has no profile.
+  DeviceLabels labels = 16;
+}
+
+// The operator's own labels for a device, kept in its profile so they follow
+// the device across USB and network connections.
+message DeviceLabels {
+  // Zero when no number is assigned.
+  uint32 number = 1;
+  // The operator's name for the device. It stands in for the masked serial,
+  // so it is not treated as personal data.
+  string alias = 2;
+  // Free text that may carry personal data, masked like other sensitive fields.
+  SearchableText note = 3;
+  repeated string tags = 4;
+}
+
+message DeviceGroup {
+  string id = 1;
+  UiText name = 2;
+  uint32 total = 3;
+  uint32 online = 4;
+  GroupTone tone = 5;
+}
+
+message TaskItem {
+  string id = 1;
+  UiText title = 2;
+  UiText target = 3;
+  TaskStatus status = 4;
+  uint32 progress = 5;
+  UiText detail = 6;
+  BatchActionKind action_kind = 7;
+  uint32 concurrency_limit = 8;
+  uint32 retry_count = 9;
+}
+
+message ConnectionPlan {
+  string id = 1;
+  UiText title = 2;
+  ConnectionType connection = 3;
+  ConnectionHealth health = 4;
+  DiagnosticCode diagnostic = 5;
+  repeated UiText steps = 6;
+}
+
+// Never filled in. The phrase library is a document collection owned by the
+// frontend, so phrases are not part of the snapshot.
+message PhraseTemplate {
+  option deprecated = true;
+
+  string id = 1;
+  UiText title = 2;
+  UiText body = 3;
+  repeated UiText tags = 4;
+  uint32 usage_count = 5;
+}
+
+message DiagnosticSignal {
+  string id = 1;
+  DiagnosticCode code = 2;
+  ConnectionHealth health = 3;
+  UiText title = 4;
+  UiText impact = 5;
+  UiText recovery = 6;
+}
+
+message WorkspaceSnapshot {
+  string schema_version = 1;
+  string locale = 2;
+  repeated DeviceRecord devices = 3;
+  repeated DeviceGroup groups = 4;
+  repeated TaskItem tasks = 5;
+  repeated ConnectionPlan connection_plans = 6;
+  // Never filled in; see `PhraseTemplate`.
+  repeated PhraseTemplate phrases = 7 [deprecated = true];
+  repeated DiagnosticSignal diagnostics = 8;
+  string adb_path = 9;
+  string host_platform = 10;
+  string fastboot_path = 11;
+  AndroidPlatformToolsState android_platform_tools = 12;
+  yunheshiguang.scrcpy.v1.ScrcpyState scrcpy = 13;
+  yunheshiguang.adb.v1.AdbRuntimeState adb = 14;
+}
+
+message BatchActionRequest {
+  BatchActionKind kind = 1;
+  repeated string device_ids = 2;
+  string text = 3;
+  string package_name = 4;
+  string path = 5;
+  WorkspaceScope scope = 6 [deprecated = true];
+  // The script document to run, for `BATCH_ACTION_KIND_RUN_SCRIPT`.
+  string script_id = 7;
+}
+
+message BatchActionResult {
+  bool accepted = 1;
+  TaskItem task = 2;
+  repeated DiagnosticSignal diagnostics = 3;
+  repeated yunheshiguang.adb.v1.AdbDeviceActionResult device_results = 4;
+  // Explanations a vendor adapter gave for devices that failed.
+  repeated DeviceHint device_hints = 5;
+  // For text and clipboard actions: which input channel served each device.
+  repeated DeviceInputRoute input_routes = 6;
+  // For scripts: which engine ran the script on each device and what it printed.
+  repeated DeviceScriptOutput script_outputs = 7;
+}
+
+// A script's run on one device.
+message DeviceScriptOutput {
+  string device_id = 1;
+  // Id of the script engine; empty when no installed engine could run it.
+  string engine_id = 2;
+  UiText engine = 3;
+  // Unset when the engine only launches the script and cannot wait for it.
+  optional int32 exit_code = 4;
+  // What the script printed, stdout and stderr together, cut to a size limit.
+  string output = 5;
+  bool truncated = 6;
+  // Unset when the engine ran the script.
+  UiText failure = 7;
+}
+
+// The input channel that served one device, and why it failed if it did.
+message DeviceInputRoute {
+  string device_id = 1;
+  // Id of the input channel; empty when no installed channel could serve the
+  // device.
+  string channel_id = 2;
+  UiText channel = 3;
+  // Unset when the channel delivered the text.
+  UiText failure = 4;
+}
+
+// Why an action failed on one device, in terms of that device's vendor, for
+// example a switch the brand hides in developer options.
+message DeviceHint {
+  string device_id = 1;
+  // Id of the vendor adapter that recognized the device.
+  string vendor_id = 2;
+  UiText hint = 3;
+}
+
+message UpdateAndroidPlatformToolsConfigRequest {
+  WorkspaceScope scope = 1 [deprecated = true];
+  AndroidPlatformToolsConfig config = 2;
+}
+
+message InstallAndroidPlatformToolsRequest {
+  WorkspaceScope scope = 1 [deprecated = true];
+  AndroidPlatformToolsPackageKind package_kind = 2 [deprecated = true];
+  bool license_accepted = 3;
+}
+
+// What the app sees of the connected devices.
+service WorkspaceService {
+  // Devices, groups, diagnostics and recent tasks as they are now.
+  rpc GetWorkspaceSnapshot(GetWorkspaceSnapshotRequest) returns (WorkspaceSnapshot) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+    option (yunheshiguang.rpc.v1.local_api) = true;
+  }
+}
+
+// Actions run on many devices at once.
+service BatchService {
+  // Runs one action on the listed devices and reports how each device did.
+  rpc RunBatchAction(BatchActionRequest) returns (BatchActionResult) {
+    option (yunheshiguang.rpc.v1.local_api) = true;
+  }
+}
+
+// The Android platform tools the app runs devices with.
+service PlatformToolsService {
+  // Chooses where the Android platform tools come from.
+  rpc UpdateAndroidPlatformToolsConfig(UpdateAndroidPlatformToolsConfigRequest) returns (AndroidPlatformToolsState);
+
+  // Downloads and installs the official Android platform tools.
+  rpc InstallAndroidPlatformTools(InstallAndroidPlatformToolsRequest) returns (AndroidPlatformToolsState);
+}

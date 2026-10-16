@@ -1,0 +1,18 @@
+{
+  "$schema": "./node_modules/knip/schema.json",
+  "ignoreExportsUsedInFile": true,
+  "workspaces": {
+    ".": {
+      "entry": [
+        "steiger.config.ts",
+        "src/shared/api/gateway/index.ts",
+        "src/shared/workspace-module/index.ts"
+      ],
+      "ignoreDependencies": ["@bufbuild/protoc-gen-es"]
+    },
+    "extensions/*/web": {}
+  },
+  "ignoreIssues": {
+    "src/shared/proto/**": ["exports", "types"]
+  }
+}

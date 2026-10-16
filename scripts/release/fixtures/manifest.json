@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "channel": "nightly",
+  "tag": "nightly",
+  "version": "0.1.0",
+  "commit": "0123456789abcdef0123456789abcdef01234567",
+  "date": "2026-10-14",
+  "assets": [
+    {
+      "name": "yunheshiguang-windows-x86_64-setup.exe",
+      "os": "windows",
+      "arch": "x86_64",
+      "kind": "installer",
+      "size": 8388608,
+      "sha256": "a3f1c2d4e5b60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90",
+      "url": "https://github.com/yunheshiguang/yunheshiguang-android/releases/download/nightly/yunheshiguang-windows-x86_64-setup.exe"
+    },
+    {
+      "name": "yunheshiguang-macos-arm64.dmg",
+      "os": "macos",
+      "arch": "arm64",
+      "kind": "disk-image",
+      "size": 12582912,
+      "sha256": "b3f1c2d4e5b60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90",
+      "url": "https://github.com/yunheshiguang/yunheshiguang-android/releases/download/nightly/yunheshiguang-macos-arm64.dmg"
+    },
+    {
+      "name": "yunheshiguang-macos-x86_64.dmg",
+      "os": "macos",
+      "arch": "x86_64",
+      "kind": "disk-image",
+      "size": 12582912,
+      "sha256": "c3f1c2d4e5b60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90",
+      "url": "https://github.com/yunheshiguang/yunheshiguang-android/releases/download/nightly/yunheshiguang-macos-x86_64.dmg"
+    },
+    {
+      "name": "yunheshiguang-linux-x86_64.AppImage",
+      "os": "linux",
+      "arch": "x86_64",
+      "kind": "appimage",
+      "size": 83886080,
+      "sha256": "d3f1c2d4e5b60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90",
+      "url": "https://github.com/yunheshiguang/yunheshiguang-android/releases/download/nightly/yunheshiguang-linux-x86_64.AppImage"
+    },
+    {
+      "name": "yunheshiguang-linux-x86_64.deb",
+      "os": "linux",
+      "arch": "x86_64",
+      "kind": "deb",
+      "size": 8388608,
+      "sha256": "e3f1c2d4e5b60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90",
+      "url": "https://github.com/yunheshiguang/yunheshiguang-android/releases/download/nightly/yunheshiguang-linux-x86_64.deb"
+    },
+    {
+      "name": "yunheshiguang-linux-x86_64.rpm",
+      "os": "linux",
+      "arch": "x86_64",
+      "kind": "rpm",
+      "size": 8388608,
+      "sha256": "f3f1c2d4e5b60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90",
+      "url": "https://github.com/yunheshiguang/yunheshiguang-android/releases/download/nightly/yunheshiguang-linux-x86_64.rpm"
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+[package]
+name = "yunheshiguang-sdk"
+description = "Extension API for yunheshiguang: the contracts extensions implement and the types they receive"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+yunheshiguang-contract.workspace = true
+tauri.workspace = true
+url.workspace = true
+serde_json.workspace = true
+atomic-write-file.workspace = true
+log.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

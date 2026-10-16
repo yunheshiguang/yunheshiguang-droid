@@ -1,0 +1,156 @@
+syntax = "proto3";
+
+package yunheshiguang.assistant.v1;
+
+import "yunheshiguang/automation/v1/automation.proto";
+import "yunheshiguang/rpc/v1/options.proto";
+import "yunheshiguang/scripts/v1/scripts.proto";
+import "yunheshiguang/workspace/v1/workspace.proto";
+
+// One way to reach a language model: the core's OpenAI-compatible endpoint, or
+// a provider an extension contributes.
+message AssistantProviderInfo {
+  string id = 1;
+  yunheshiguang.workspace.v1.UiText label = 2;
+  yunheshiguang.workspace.v1.UiText description = 3;
+  // The settings page configures its endpoint, model, and key. Contributed
+  // providers read their own configuration.
+  bool configurable = 4;
+  // Configured well enough to answer.
+  bool ready = 5;
+  // Why it is not ready.
+  yunheshiguang.workspace.v1.UiText problem = 6;
+}
+
+// How the core asks an OpenAI-compatible endpoint for structured output.
+enum StructuredOutput {
+  STRUCTURED_OUTPUT_UNSPECIFIED = 0;
+  // `response_format: json_schema`, supported by OpenAI, Ollama, vLLM, and others.
+  STRUCTURED_OUTPUT_JSON_SCHEMA = 1;
+  // `response_format: json_object` with the schema in the prompt, for endpoints
+  // such as DeepSeek that only offer JSON mode.
+  STRUCTURED_OUTPUT_JSON_OBJECT = 2;
+}
+
+message AssistantSettings {
+  // The provider that drafts; empty means the first ready one.
+  string provider_id = 1;
+  // Settings of the core's OpenAI-compatible provider.
+  string base_url = 2;
+  string model = 3;
+  // Whether a key is stored. The key itself never leaves the backend.
+  bool api_key_set = 4;
+  StructuredOutput structured_output = 5;
+}
+
+message AssistantState {
+  // Contributed providers first, then the core's.
+  repeated AssistantProviderInfo providers = 1;
+  AssistantSettings settings = 2;
+}
+
+message GetAssistantRequest {
+  yunheshiguang.workspace.v1.WorkspaceScope scope = 1 [deprecated = true];
+}
+
+message UpdateAssistantRequest {
+  // `api_key_set` is ignored; use `api_key` to change the key.
+  AssistantSettings settings = 1;
+  // A new key. Absent keeps the stored key while `settings.base_url` stays on
+  // the same origin; empty removes it.
+  optional string api_key = 2;
+  yunheshiguang.workspace.v1.WorkspaceScope scope = 3 [deprecated = true];
+}
+
+message AssistantResult {
+  bool accepted = 1;
+  yunheshiguang.workspace.v1.UiText detail = 2;
+  AssistantState state = 3;
+}
+
+message DraftFlowRequest {
+  // What the flow should do, in the operator's words.
+  string prompt = 1;
+  yunheshiguang.workspace.v1.WorkspaceScope scope = 2 [deprecated = true];
+}
+
+// Something in a draft that needs attention before the flow can run.
+message DraftIssue {
+  // The step it concerns; empty for the draft as a whole.
+  string step_id = 1;
+  yunheshiguang.workspace.v1.UiText message = 2;
+}
+
+// A flow the model proposed. It is never saved or run automatically: the
+// operator reviews it in the editor first.
+message FlowDraft {
+  yunheshiguang.automation.v1.Flow flow = 1;
+  repeated DraftIssue issues = 2;
+  string provider_id = 3;
+  string model = 4;
+}
+
+message DraftFlowResult {
+  bool accepted = 1;
+  yunheshiguang.workspace.v1.UiText detail = 2;
+  FlowDraft draft = 3;
+}
+
+message DraftScriptRequest {
+  string prompt = 1;
+  yunheshiguang.scripts.v1.ScriptLanguage language = 2;
+  // The script being edited, for requests such as "also print the battery".
+  string current_body = 3;
+  yunheshiguang.workspace.v1.WorkspaceScope scope = 4 [deprecated = true];
+}
+
+message ScriptDraft {
+  yunheshiguang.scripts.v1.Script script = 1;
+  // What the script does, in the model's words.
+  string explanation = 2;
+  string provider_id = 3;
+  string model = 4;
+}
+
+message DraftScriptResult {
+  bool accepted = 1;
+  yunheshiguang.workspace.v1.UiText detail = 2;
+  ScriptDraft draft = 3;
+}
+
+// The AI assistant that drafts flows and scripts.
+service AssistantService {
+  // The assistant's providers and settings.
+  rpc GetAssistant(GetAssistantRequest) returns (AssistantState) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+
+  // Changes the assistant's settings.
+  rpc UpdateAssistant(UpdateAssistantRequest) returns (AssistantResult);
+
+  // Drafts a flow, sending the answer as it is written and then the checked draft.
+  rpc DraftFlow(DraftFlowRequest) returns (stream DraftFlowEvent) {
+    option (yunheshiguang.rpc.v1.local_api) = true;
+  }
+
+  // Drafts a script, sending the answer as it is written and then the checked draft.
+  rpc DraftScript(DraftScriptRequest) returns (stream DraftScriptEvent) {
+    option (yunheshiguang.rpc.v1.local_api) = true;
+  }
+}
+
+// Part of the answer as the model writes it, then the finished draft.
+message DraftFlowEvent {
+  oneof event {
+    string text = 1;
+    DraftFlowResult result = 2;
+  }
+}
+
+// Part of the answer as the model writes it, then the finished draft.
+message DraftScriptEvent {
+  oneof event {
+    string text = 1;
+    DraftScriptResult result = 2;
+  }
+}

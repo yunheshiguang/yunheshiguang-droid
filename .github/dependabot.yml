@@ -1,0 +1,65 @@
+version: 2
+
+multi-ecosystem-groups:
+  tauri:
+    schedule:
+      interval: weekly
+
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    ignore:
+      - dependency-name: "@tauri-apps/*"
+    groups:
+      protobuf:
+        patterns: ["@bufbuild/*", "@connectrpc/*"]
+      npm-minor-and-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: cargo
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    ignore:
+      - dependency-name: "tauri"
+      - dependency-name: "tauri-*"
+    groups:
+      protobuf:
+        patterns: ["buffa", "buffa-*", "connectrpc", "connectrpc-*", "protox", "prost-reflect"]
+      cargo-minor-and-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: npm
+    directory: /
+    patterns: ["@tauri-apps/*"]
+    multi-ecosystem-group: tauri
+    cooldown:
+      default-days: 7
+
+  - package-ecosystem: cargo
+    directory: /
+    patterns: ["tauri", "tauri-*"]
+    multi-ecosystem-group: tauri
+    cooldown:
+      default-days: 7
+
+  - package-ecosystem: rust-toolchain
+    directory: /
+    schedule:
+      interval: monthly
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    cooldown:
+      default-days: 7
+    groups:
+      github-actions:
+        patterns: ["*"]

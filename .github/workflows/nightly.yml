@@ -1,0 +1,100 @@
+name: Nightly
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nightly-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  ci:
+    name: CI
+    uses: ./.github/workflows/ci.yml
+
+  installers:
+    name: Build
+    needs: ci
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    uses: ./.github/workflows/installers.yml
+    with:
+      channel: nightly
+
+  publish:
+    name: Publish nightly
+    needs: installers
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      TAG: nightly
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Install Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: package.json
+
+      - name: Download installers
+        uses: actions/download-artifact@v8
+        with:
+          pattern: installers-*
+          path: release-assets
+          merge-multiple: true
+
+      - name: Check the installers against the asset list
+        run: node scripts/release/release.mjs verify release-assets
+
+      - name: Write checksums, manifest, and notes
+        run: |
+          previous=$(git rev-parse --verify --quiet "refs/tags/$TAG^{commit}" || true)
+          details=(--repo "$GH_REPO" --tag "$TAG" --channel nightly --commit "$GITHUB_SHA" --date "$(date -u +%F)")
+          node scripts/release/release.mjs checksums release-assets -o release-assets/SHA256SUMS
+          node scripts/release/release.mjs manifest release-assets "${details[@]}" -o release-assets/release.json
+          node scripts/release/release.mjs notes "${details[@]}" --previous "$previous" --since "${previous:0:7}" -o notes.md
+
+      - name: Create the nightly release
+        run: |
+          if ! gh release view "$TAG" > /dev/null 2>&1; then
+            scripts/retry.sh 3 10 gh release create "$TAG" --prerelease --target "$GITHUB_SHA" --title Nightly --notes-file notes.md
+          fi
+
+      - name: Replace the installers
+        run: |
+          shopt -s nullglob
+          installers=(release-assets/yunheshiguang-*)
+          scripts/retry.sh 3 15 gh release upload "$TAG" "${installers[@]}" --clobber
+          scripts/retry.sh 3 15 gh release upload "$TAG" release-assets/SHA256SUMS release-assets/release.json --clobber
+
+      - name: Remove files this build no longer ships
+        run: |
+          gh release view "$TAG" --json assets --jq '.assets[].name' | while read -r name; do
+            if [ ! -f "release-assets/$name" ]; then
+              scripts/retry.sh 3 10 gh release delete-asset "$TAG" "$name" --yes
+            fi
+          done
+
+      - name: Point the nightly tag at this commit
+        run: |
+          if git rev-parse --verify --quiet "refs/tags/$TAG" > /dev/null; then
+            scripts/retry.sh 3 10 gh api --method PATCH "repos/$GH_REPO/git/refs/tags/$TAG" -f sha="$GITHUB_SHA" -F force=true > /dev/null
+          fi
+          scripts/retry.sh 3 10 gh release edit "$TAG" --prerelease --title "Nightly $(date -u +%F) (${GITHUB_SHA:0:7})" --notes-file notes.md
+
+      - name: Check the published release
+        run: |
+          gh release view "$TAG" --json assets > published.json
+          node scripts/release/release.mjs uploaded release-assets published.json

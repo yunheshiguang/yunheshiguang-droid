@@ -1,0 +1,89 @@
+syntax = "proto3";
+
+package yunheshiguang.adb.v1;
+
+// Describes the connection state reported by `adb devices -l`.
+enum AdbDeviceState {
+  ADB_DEVICE_STATE_UNSPECIFIED = 0;
+  ADB_DEVICE_STATE_ONLINE = 1;
+  ADB_DEVICE_STATE_OFFLINE = 2;
+  ADB_DEVICE_STATE_UNAUTHORIZED = 3;
+  ADB_DEVICE_STATE_NO_PERMISSIONS = 4;
+  ADB_DEVICE_STATE_RECOVERY = 5;
+  ADB_DEVICE_STATE_SIDELOAD = 6;
+  ADB_DEVICE_STATE_BOOTLOADER = 7;
+  ADB_DEVICE_STATE_UNKNOWN = 8;
+}
+
+// Describes how an ADB target is connected to the host.
+enum AdbTransportKind {
+  ADB_TRANSPORT_KIND_UNSPECIFIED = 0;
+  ADB_TRANSPORT_KIND_USB = 1;
+  ADB_TRANSPORT_KIND_WIFI = 2;
+  ADB_TRANSPORT_KIND_EMULATOR = 3;
+  ADB_TRANSPORT_KIND_OTHER = 4;
+}
+
+// Describes whether the selected ADB runtime answered its probe.
+enum AdbServerState {
+  ADB_SERVER_STATE_UNSPECIFIED = 0;
+  ADB_SERVER_STATE_READY = 1;
+  ADB_SERVER_STATE_UNAVAILABLE = 2;
+}
+
+// Stable error categories returned for one device action.
+enum AdbErrorKind {
+  ADB_ERROR_KIND_UNSPECIFIED = 0;
+  ADB_ERROR_KIND_NOT_FOUND = 1;
+  ADB_ERROR_KIND_PERMISSION_DENIED = 2;
+  ADB_ERROR_KIND_TIMEOUT = 3;
+  ADB_ERROR_KIND_OUTPUT_LIMIT_EXCEEDED = 4;
+  ADB_ERROR_KIND_NON_ZERO_EXIT = 5;
+  ADB_ERROR_KIND_INVALID_OUTPUT = 6;
+  ADB_ERROR_KIND_UNSUPPORTED = 7;
+  ADB_ERROR_KIND_IO = 8;
+}
+
+// Contains the ADB metadata used by the workspace device model.
+message AdbDevice {
+  // ADB's host-visible device identifier.
+  string serial = 1;
+  // Current protocol state.
+  AdbDeviceState state = 2;
+  // Best-effort transport classification.
+  AdbTransportKind transport = 3;
+  // Human-readable model reported by ADB.
+  string model = 4;
+  // Android device codename.
+  string device = 5;
+  // Android product name.
+  string product = 6;
+  // USB topology identifier when available.
+  string usb = 7;
+  // ADB server transport identifier when available.
+  string transport_id = 8;
+}
+
+// Contains one consistent probe of the selected host-wide ADB runtime.
+message AdbRuntimeState {
+  // Absolute executable selected for this probe.
+  string executable_path = 1;
+  // Version text returned by `adb version`.
+  string version = 2;
+  // Availability of the selected ADB server.
+  AdbServerState server_state = 3;
+  // Devices reported by the same runtime probe.
+  repeated AdbDevice devices = 4;
+}
+
+// Reports the outcome of a batch action for one requested device.
+message AdbDeviceActionResult {
+  // Requested ADB device identifier.
+  string device_id = 1;
+  // Whether the action completed successfully.
+  bool success = 2;
+  // Stable machine-readable failure category.
+  AdbErrorKind error_kind = 3;
+  // Sanitized human-readable failure detail.
+  string message = 4;
+}

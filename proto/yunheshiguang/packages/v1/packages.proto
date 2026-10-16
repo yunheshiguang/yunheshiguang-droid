@@ -1,0 +1,212 @@
+syntax = "proto3";
+
+package yunheshiguang.packages.v1;
+
+import "google/protobuf/timestamp.proto";
+import "yunheshiguang/automation/v1/automation.proto";
+import "yunheshiguang/rpc/v1/options.proto";
+import "yunheshiguang/scripts/v1/scripts.proto";
+import "yunheshiguang/workspace/v1/workspace.proto";
+
+// Describes a package of flows and the scripts they run.
+message PackageManifest {
+  // Letters, digits, `.`, `-`, and `_`, for example `com.example.nightly`.
+  string id = 1;
+  string name = 2;
+  // Semantic version of the package's content, for example `1.2.0`.
+  string version = 3;
+  string author = 4;
+  string description = 5;
+  google.protobuf.Timestamp created_at = 6;
+}
+
+message PackageFlow {
+  string id = 1;
+  yunheshiguang.automation.v1.Flow flow = 2;
+}
+
+message PackageScript {
+  string id = 1;
+  yunheshiguang.scripts.v1.Script script = 2;
+}
+
+// A shareable bundle of flows and the scripts they run. A package file is this
+// message as JSON.
+message TemplatePackage {
+  PackageManifest manifest = 1;
+  repeated PackageFlow flows = 2;
+  repeated PackageScript scripts = 3;
+  // Lowercase hex SHA-256 of the package file's JSON without this field, with
+  // object keys sorted and no whitespace. Fields a newer version adds are
+  // covered too, so older readers can still verify the file.
+  string digest = 4;
+  // Who published the package, when it is signed.
+  PackageSignature signature = 5;
+}
+
+// A minisign signature over the package's JSON without `digest` and
+// `signature`, keys sorted and no whitespace. The digest only shows that the
+// file is unchanged; the signature shows whose key published it. The signer's
+// name is in the signed trusted comment (`signer:<name>`).
+message PackageSignature {
+  // The signer's minisign public key, base64.
+  string public_key = 1;
+  // The text of the `.minisig` signature.
+  string minisig = 2;
+}
+
+// A signer whose signature checked out.
+message PackageSigner {
+  // The minisign key id, 16 uppercase hex digits.
+  string key_id = 1;
+  // The name the operator trusted the key under, or, for a key not yet
+  // trusted, the name the signer signed with.
+  string name = 2;
+  // This computer's own key, or a key the operator chose to trust.
+  bool trusted = 3;
+  // The signer's minisign public key, base64, for trusting it.
+  string public_key = 4;
+}
+
+// A package offered by a template source that the granted capabilities unlock.
+message MarketRef {
+  string source_id = 1;
+  string package_id = 2;
+}
+
+// Where a package to inspect or install comes from.
+message PackageOrigin {
+  oneof origin {
+    // A package file chosen by the operator.
+    string path = 1;
+    MarketRef market = 2;
+    // The package document itself, for callers that have no file on this
+    // computer, such as the local API.
+    string json = 3;
+  }
+}
+
+message ExportPackageRequest {
+  PackageManifest manifest = 1;
+  // The flows to include; the scripts they run are included with them.
+  repeated string flow_ids = 2;
+  // Where to write the file, chosen in a save dialog.
+  string path = 3;
+  yunheshiguang.workspace.v1.WorkspaceScope scope = 4 [deprecated = true];
+}
+
+message ExportPackageResult {
+  bool accepted = 1;
+  yunheshiguang.workspace.v1.UiText detail = 2;
+  uint32 flows = 3;
+  uint32 scripts = 4;
+}
+
+// A flow or script in a package, and whether the library already has one with
+// the same id.
+message PackageItem {
+  string id = 1;
+  string name = 2;
+  bool exists = 3;
+}
+
+message PackagePreview {
+  PackageManifest manifest = 1;
+  repeated PackageItem flows = 2;
+  repeated PackageItem scripts = 3;
+  // What would make the installed flows fail, such as a step that runs a
+  // script the package does not include.
+  repeated yunheshiguang.workspace.v1.UiText problems = 4;
+  // Signed by this computer's key or a key the operator trusts, or offered by a
+  // template source built into this application.
+  bool verified = 5;
+  // Set when the package is signed and its signature checks out.
+  PackageSigner signer = 6;
+}
+
+// Trust a signer, so the packages it signs show as trusted.
+message TrustPackageSignerRequest {
+  string public_key = 1;
+  // How this computer refers to the signer; the signed name when empty.
+  string name = 2;
+  yunheshiguang.workspace.v1.WorkspaceScope scope = 3 [deprecated = true];
+}
+
+message TrustPackageSignerResult {
+  bool accepted = 1;
+  yunheshiguang.workspace.v1.UiText detail = 2;
+}
+
+message InspectPackageRequest {
+  PackageOrigin origin = 1;
+  yunheshiguang.workspace.v1.WorkspaceScope scope = 2 [deprecated = true];
+}
+
+message InspectPackageResult {
+  bool accepted = 1;
+  yunheshiguang.workspace.v1.UiText detail = 2;
+  PackagePreview preview = 3;
+}
+
+// What to do with an item whose id is already in the library.
+enum ConflictPolicy {
+  CONFLICT_POLICY_UNSPECIFIED = 0;
+  CONFLICT_POLICY_REPLACE = 1;
+  // Install under a new id; flows that run the script follow it.
+  CONFLICT_POLICY_KEEP_BOTH = 2;
+  CONFLICT_POLICY_SKIP = 3;
+}
+
+message InstallPackageRequest {
+  PackageOrigin origin = 1;
+  ConflictPolicy on_conflict = 2;
+  yunheshiguang.workspace.v1.WorkspaceScope scope = 3 [deprecated = true];
+}
+
+message InstallPackageResult {
+  bool accepted = 1;
+  yunheshiguang.workspace.v1.UiText detail = 2;
+  uint32 flows = 3;
+  uint32 scripts = 4;
+}
+
+message MarketPackage {
+  string source_id = 1;
+  yunheshiguang.workspace.v1.UiText source = 2;
+  PackageManifest manifest = 3;
+  uint32 flows = 4;
+  uint32 scripts = 5;
+}
+
+message ListMarketPackagesRequest {
+  yunheshiguang.workspace.v1.WorkspaceScope scope = 1 [deprecated = true];
+}
+
+message MarketPackages {
+  repeated MarketPackage packages = 1;
+}
+
+// Template packages: exporting flows and scripts, and installing them elsewhere.
+service PackageService {
+  // Writes the chosen flows and their scripts to a package file.
+  rpc ExportPackage(ExportPackageRequest) returns (ExportPackageResult);
+
+  // What a package holds and whether it is signed by a trusted signer.
+  rpc InspectPackage(InspectPackageRequest) returns (InspectPackageResult) {
+    option (yunheshiguang.rpc.v1.local_api) = true;
+  }
+
+  // Installs a package's flows and scripts.
+  rpc InstallPackage(InstallPackageRequest) returns (InstallPackageResult) {
+    option (yunheshiguang.rpc.v1.local_api) = true;
+  }
+
+  // Adds a signer to the trusted signers.
+  rpc TrustPackageSigner(TrustPackageSignerRequest) returns (TrustPackageSignerResult);
+
+  // Packages the installed template markets offer.
+  rpc ListMarketPackages(ListMarketPackagesRequest) returns (MarketPackages) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+    option (yunheshiguang.rpc.v1.local_api) = true;
+  }
+}

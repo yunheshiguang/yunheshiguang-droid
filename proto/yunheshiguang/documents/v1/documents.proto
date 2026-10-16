@@ -1,0 +1,66 @@
+syntax = "proto3";
+
+package yunheshiguang.documents.v1;
+
+import "yunheshiguang/rpc/v1/options.proto";
+import "yunheshiguang/workspace/v1/workspace.proto";
+
+// A JSON document owned by the frontend, such as one automation flow. The store
+// only guarantees the body is valid JSON; its shape belongs to whoever writes it.
+message Document {
+  string id = 1;
+  string body = 2;
+}
+
+message ListDocumentsRequest {
+  // Lowercase letters, digits, and hyphens.
+  string collection = 1;
+  yunheshiguang.workspace.v1.WorkspaceScope scope = 2 [deprecated = true];
+}
+
+message DocumentList {
+  string collection = 1;
+  // Sorted by id.
+  repeated Document documents = 2;
+}
+
+message SaveDocumentRequest {
+  string collection = 1;
+  Document document = 2;
+  yunheshiguang.workspace.v1.WorkspaceScope scope = 3 [deprecated = true];
+}
+
+message RemoveDocumentRequest {
+  string collection = 1;
+  string id = 2;
+  yunheshiguang.workspace.v1.WorkspaceScope scope = 3 [deprecated = true];
+}
+
+// Payload of the `workspace:documents-changed` event, sent after a save or a
+// removal so every window refreshes that collection.
+message DocumentsChanged {
+  string collection = 1;
+}
+
+// Documents the workspace keeps, such as scripts, flows and phrases.
+service DocumentService {
+  // Every document in a collection.
+  rpc ListDocuments(ListDocumentsRequest) returns (DocumentList) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+    option (yunheshiguang.rpc.v1.local_api) = true;
+  }
+
+  // Saves a document, replacing one with the same id.
+  rpc SaveDocument(SaveDocumentRequest) returns (SaveDocumentResult) {
+    option (yunheshiguang.rpc.v1.local_api) = true;
+  }
+
+  // Removes a document.
+  rpc RemoveDocument(RemoveDocumentRequest) returns (RemoveDocumentResult) {
+    option (yunheshiguang.rpc.v1.local_api) = true;
+  }
+}
+
+message SaveDocumentResult {}
+
+message RemoveDocumentResult {}

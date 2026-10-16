@@ -1,0 +1,115 @@
+syntax = "proto3";
+
+package yunheshiguang.connection.v1;
+
+import "yunheshiguang/workspace/v1/workspace.proto";
+
+// Where a network device listens. `host` is an IPv4 or IPv6 literal or a host name.
+message NetworkEndpoint {
+  string host = 1;
+  uint32 port = 2;
+}
+
+// Attaches a device that already listens for debugging connections, for example
+// after `adb tcpip` or once wireless debugging has been paired.
+message ConnectDeviceRequest {
+  NetworkEndpoint endpoint = 1;
+  yunheshiguang.workspace.v1.WorkspaceScope scope = 2 [deprecated = true];
+}
+
+// Pairs with a device through Android 11+ wireless debugging. The endpoint and
+// code are the ones the device shows under "Pair device with pairing code".
+message PairDeviceRequest {
+  NetworkEndpoint endpoint = 1;
+  string pairing_code = 2;
+  yunheshiguang.workspace.v1.WorkspaceScope scope = 3 [deprecated = true];
+}
+
+// Detaches one network device. `device_id` is the `host:port` identifier the
+// device carries in the workspace snapshot.
+message DisconnectDeviceRequest {
+  string device_id = 1;
+  yunheshiguang.workspace.v1.WorkspaceScope scope = 2 [deprecated = true];
+}
+
+// Append new values; never renumber.
+enum ConnectionOutcome {
+  CONNECTION_OUTCOME_UNSPECIFIED = 0;
+  CONNECTION_OUTCOME_CONNECTED = 1;
+  CONNECTION_OUTCOME_ALREADY_CONNECTED = 2;
+  CONNECTION_OUTCOME_PAIRED = 3;
+  CONNECTION_OUTCOME_DISCONNECTED = 4;
+  // The request itself was malformed; nothing was attempted.
+  CONNECTION_OUTCOME_INVALID_REQUEST = 5;
+  // The host could not be resolved or did not accept the connection.
+  CONNECTION_OUTCOME_UNREACHABLE = 6;
+  // The device refused: the debugging prompt was declined or the pairing code was wrong.
+  CONNECTION_OUTCOME_REJECTED = 7;
+  // The device to disconnect is not attached.
+  CONNECTION_OUTCOME_NOT_CONNECTED = 8;
+  // No usable platform tools are configured.
+  CONNECTION_OUTCOME_TOOLS_UNAVAILABLE = 9;
+  // Governance refused the operation before it ran.
+  CONNECTION_OUTCOME_DENIED = 10;
+  CONNECTION_OUTCOME_FAILED = 11;
+}
+
+message ConnectionResult {
+  ConnectionOutcome outcome = 1;
+  // Identifier the device carries once attached, or the one that was detached.
+  string device_id = 2;
+  yunheshiguang.workspace.v1.UiText detail = 3;
+}
+
+// A device a transport can reach but that is not attached yet, for example a
+// phone advertising Android wireless debugging over mDNS, or a cloud phone from
+// an extension's inventory.
+message DiscoveredEndpoint {
+  // Id of the transport that found it; the connection plan with the same id
+  // explains that transport.
+  string transport_id = 1;
+  // What the transport calls the device. Service names carry the device
+  // serial, so this is searchable text with its own privacy class.
+  yunheshiguang.workspace.v1.SearchableText label = 2;
+  NetworkEndpoint endpoint = 3;
+  // The endpoint is a pairing service: pair with the code the device shows
+  // before connecting.
+  bool requires_pairing = 4;
+  yunheshiguang.workspace.v1.ConnectionType connection = 5;
+}
+
+message DiscoverDevicesRequest {
+  yunheshiguang.workspace.v1.WorkspaceScope scope = 1 [deprecated = true];
+}
+
+// A transport whose discovery failed. The other transports still report
+// their devices.
+message DiscoveryFailure {
+  string transport_id = 1;
+  yunheshiguang.workspace.v1.UiText reason = 2;
+}
+
+message DeviceDiscovery {
+  repeated DiscoveredEndpoint endpoints = 1;
+  repeated DiscoveryFailure failures = 2;
+}
+
+// Connecting devices over the network.
+service ConnectionService {
+  // Connects to a device at a network address.
+  rpc ConnectDevice(ConnectDeviceRequest) returns (ConnectionResult);
+
+  // Pairs with a device using its wireless debugging code.
+  rpc PairDevice(PairDeviceRequest) returns (ConnectionResult);
+
+  // Disconnects a network device.
+  rpc DisconnectDevice(DisconnectDeviceRequest) returns (ConnectionResult);
+}
+
+// Devices nearby that can be connected.
+service DiscoveryService {
+  // Devices nearby that can be connected.
+  rpc DiscoverDevices(DiscoverDevicesRequest) returns (DeviceDiscovery) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+}
