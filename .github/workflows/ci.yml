@@ -47,7 +47,7 @@ jobs:
         run: rustup toolchain install
 
       - name: Cache Rust build
-        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0
         with:
           workspaces: . -> target
           save-if: ${{ github.ref == 'refs/heads/main' }}
@@ -99,7 +99,7 @@ jobs:
         run: cargo clippy -p yunheshiguang --locked -- -D warnings
 
       - name: Install cargo-deny
-        uses: taiki-e/install-action@ab6895351a88b908e96a4697860d4ffea5e57dbe
+        uses: taiki-e/install-action@1e29709c0ec63babbe8f266397a465f29a825f91
         with:
           tool: cargo-deny@0.20.2
 
@@ -167,7 +167,7 @@ jobs:
         run: rustup toolchain install
 
       - name: Cache Rust build
-        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0
         with:
           workspaces: . -> target
           save-if: ${{ github.ref == 'refs/heads/main' }}
